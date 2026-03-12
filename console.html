@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mission XR — Operations Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/ops-style.css">
+</head>
+<body>
+
+<!-- ===== DASHBOARD SCREEN ===== -->
+<div id="dashboard-screen">
+  <div id="topbar">
+    <div class="topbar-logo">OPS<span>::</span>CONSOLE</div>
+    <div class="topbar-center" id="mission-tabs"></div>
+    <div class="topbar-right">
+      <div class="role-switcher">
+        <button class="role-opt" onclick="setRole('VIEWER',this)">VIEWER</button>
+        <button class="role-opt active" onclick="setRole('OPERATOR',this)">OPERATOR</button>
+        <button class="role-opt" onclick="setRole('SUPERVISOR',this)">SUPERVISOR</button>
+      </div>
+      <div class="role-badge" id="role-badge">OPERATOR</div>
+      <div class="user-presence">
+        <div class="avatar" id="user-avatar">A</div>
+        <div class="avatar" style="border-color:var(--accent2);color:var(--accent2)">B</div>
+      </div>
+      <div class="sys-time" id="clock">--:--:--</div>
+      <button class="btn-logout" onclick="doLogout()">LOGOUT</button>
+    </div>
+  </div>
+  <div id="main">
+    <!-- LEFT -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">MISSIONS</span>
+        <span class="panel-badge" id="missions-badge">5 LOADED</span>
+      </div>
+      <div id="mission-list"></div>
+      <div class="divider"></div>
+      <div class="section-label">ACTION LANE</div>
+      <div class="action-lane" id="action-lane"></div>
+      <div class="divider"></div>
+      <div class="section-label">GATES / CONSTRAINTS</div>
+      <div class="action-lane" id="gates-lane" style="max-height:120px;"></div>
+    </div>
+
+    <!-- CENTER MAP -->
+    <div id="map-area">
+      <canvas id="map-canvas"></canvas>
+      <svg id="path-overlay" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="agents-layer"></div>
+      <div class="map-overlay-tl">
+        <div id="map-coords">LAT 47.3769° N</div>
+        <div id="map-coords2">LON 15.0908° E</div>
+        <div style="margin-top:6px;color:var(--accent2)">● 2 USERS ONLINE</div>
+        <div style="margin-top:4px;font-size:10px;" id="map-mission-label"></div>
+      </div>
+      <div class="map-overlay-tr">
+        <button class="map-btn active-view">2D</button>
+        <button class="map-btn" onclick="showToast('3D/AR — WebXR integration point')">3D/AR</button>
+        <button class="map-btn" onclick="showToast('VR — WebXR integration point')">VR</button>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="panel panel-right">
+      <div class="panel-header"><span class="panel-title">CONTEXT</span></div>
+      <div class="context-section" id="context-vars"></div>
+      <div class="panel-header" style="border-top:1px solid var(--border)">
+        <span class="panel-title">EVENTS</span>
+        <span class="panel-badge" id="unacked-count">0 UNACKED</span>
+      </div>
+      <div class="event-list" id="event-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERRIDE MODAL -->
+<div id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">⚠ OVERRIDE REQUEST</div>
+    <div class="modal-body" id="modal-body">Override details here.</div>
+    <textarea class="modal-comment" id="modal-comment" rows="3" placeholder="Enter mandatory comment for audit trail..."></textarea>
+    <div class="modal-actions">
+      <button class="btn-reject" onclick="closeModal('REJECTED')">REJECT</button>
+      <button class="btn-approve" onclick="closeModal('APPROVED')">APPROVE OVERRIDE</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+
+
+<!-- Scripts — load order matters -->
+<script src="js/data.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/map.js"></script>
+<script src="js/telemetry.js"></script>
+<script src="js/xr-engine.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>
