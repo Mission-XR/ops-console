@@ -78,9 +78,6 @@ function showDashboard(role, user) {
   d.style.display = 'flex';
   currentRole = role;
   document.getElementById('role-badge').textContent = role;
-  document.querySelectorAll('.role-opt').forEach(function(b){
-    b.classList.toggle('active', b.textContent === role);
-  });
   document.getElementById('user-avatar').textContent = user.charAt(0).toUpperCase();
   initDashboard();
 }
@@ -95,12 +92,4 @@ function doLogout() {
   hideAlert();
 }
 
-function setRole(role, el) {
-  currentRole = role;
-  document.querySelectorAll('.role-opt').forEach(function(b){ b.classList.remove('active'); });
-  el.classList.add('active');
-  document.getElementById('role-badge').textContent = role;
-  renderActionLane();
-  renderEvents();
-  showToast('Role switched: ' + role);
-}
+
