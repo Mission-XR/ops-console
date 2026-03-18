@@ -1,0 +1,57 @@
+/* ===== LOGIN SCREEN ===== */
+#login-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; }
+
+.bg-pulse {
+  position:fixed; width:600px; height:600px; border-radius:50%;
+  background:radial-gradient(circle,rgba(0,212,255,0.04) 0%,transparent 70%);
+  top:50%; left:50%; transform:translate(-50%,-50%);
+  animation:bgpulse 4s ease-in-out infinite; pointer-events:none;
+}
+
+.login-box {
+  width:420px; background:var(--panel); border:1px solid var(--border);
+  padding:40px; position:relative; animation:fadein .5s ease;
+}
+.login-box::before { content:''; position:absolute; top:-1px; left:-1px; width:16px; height:16px; border-top:2px solid var(--accent); border-left:2px solid var(--accent); }
+.login-box::after  { content:''; position:absolute; bottom:-1px; right:-1px; width:16px; height:16px; border-bottom:2px solid var(--accent); border-right:2px solid var(--accent); }
+
+.logo { font-family:'Share Tech Mono',monospace; font-size:22px; color:var(--accent); letter-spacing:4px; text-align:center; margin-bottom:4px; }
+.logo span { color:var(--accent2); }
+.subtitle { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--dim); letter-spacing:3px; text-align:center; margin-bottom:32px; }
+
+.field { margin-bottom:20px; }
+.field label { display:block; font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--dim); letter-spacing:2px; margin-bottom:6px; }
+.field input { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:'Rajdhani',sans-serif; font-size:15px; padding:10px 12px; outline:none; transition:border-color .2s; }
+.field input:focus { border-color:var(--accent); }
+.field-error { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--danger); margin-top:4px; display:none; }
+.field-error.show { display:block; }
+
+.btn-login { width:100%; padding:12px; background:rgba(0,212,255,.1); border:1px solid var(--accent); color:var(--accent); font-family:'Rajdhani',sans-serif; font-weight:700; font-size:15px; letter-spacing:3px; cursor:pointer; transition:all .2s; margin-top:8px; position:relative; }
+.btn-login:hover:not(:disabled) { background:rgba(0,212,255,.2); }
+.btn-login:disabled { opacity:.6; cursor:not-allowed; }
+.btn-login.loading { color:transparent; }
+.btn-login.loading::after { content:''; position:absolute; width:16px; height:16px; border:2px solid var(--accent); border-top-color:transparent; border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); animation:spin .8s linear infinite; }
+
+.alert { padding:10px 14px; border:1px solid; font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:1px; margin-bottom:20px; display:none; line-height:1.5; }
+.alert.show   { display:block; }
+.alert.danger { border-color:var(--danger); color:var(--danger); background:rgba(255,43,94,.08); }
+.alert.warn   { border-color:var(--warn);   color:var(--warn);   background:rgba(255,107,43,.08); }
+.alert.info   { border-color:var(--accent);  color:var(--accent);  background:rgba(0,212,255,.08); }
+
+.demo-section { margin-top:28px; border-top:1px solid var(--border); padding-top:20px; }
+.demo-label { font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--dim); letter-spacing:2px; margin-bottom:10px; }
+.demo-users { display:flex; flex-direction:column; gap:6px; }
+.demo-user { display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border:1px solid var(--border); cursor:pointer; transition:all .15s; }
+.demo-user:hover { border-color:var(--accent); background:rgba(0,212,255,.05); }
+.demo-user-info { display:flex; flex-direction:column; gap:2px; }
+.demo-user-name { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text); }
+.demo-user-creds { font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--dim); }
+.demo-role { font-family:'Share Tech Mono',monospace; font-size:10px; padding:3px 8px; letter-spacing:1px; }
+.role-supervisor { color:var(--danger); border:1px solid rgba(255,43,94,.4); }
+.role-operator   { color:var(--warn);   border:1px solid rgba(255,107,43,.4); }
+.role-viewer     { color:var(--accent);  border:1px solid rgba(0,212,255,.4); }
+
+.status-bar { display:flex; justify-content:space-between; margin-top:24px; padding-top:16px; border-top:1px solid var(--border); }
+.status-dot-row { display:flex; align-items:center; gap:6px; font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--dim); }
+.sdot { width:6px; height:6px; border-radius:50%; background:var(--accent2); box-shadow:0 0 6px var(--accent2); }
+.version { font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--dim); }
