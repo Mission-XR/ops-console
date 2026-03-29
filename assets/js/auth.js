@@ -1,6 +1,10 @@
 // ============================================================
 //  AUTH — Login, logout, RBAC logic
 // ============================================================
+
+// Variable global para controlar la pausa del sistema sin romper datos
+window.emergencyStopped = false;
+
 var USERS = {
   'supervisor@ops.net': { password:'super123', role:'SUPERVISOR' },
   'operator@ops.net':   { password:'oper123',  role:'OPERATOR'   },
@@ -123,6 +127,10 @@ function showDashboard(role, user) {
         
         applyRoleUI(role);
         initDashboard();
+
+        // --- ACTUALIZAR CHAT AL ENTRAR SEGÚN EL ROL ---
+        if (typeof updateChatUI === 'function') updateChatUI();
+
       }, 500); 
     }
     
@@ -132,7 +140,6 @@ function showDashboard(role, user) {
   }, 100); 
 }
 
-
 function applyRoleUI(role) {
   var eStop = document.getElementById('btn-emergency-stop');
   if (eStop) eStop.remove();
@@ -140,19 +147,42 @@ function applyRoleUI(role) {
   if (role === 'SUPERVISOR') {
     var btn = document.createElement('button');
     btn.id = 'btn-emergency-stop';
-    btn.innerHTML = '⚠ EMERGENCY STOP';
-    btn.style.cssText = 'background: #ff2a2a; color: white; border: none; padding: 4px 12px; margin-right: 15px; cursor: pointer; font-weight: bold; font-family: "Share Tech Mono", monospace; letter-spacing: 1px; border-radius: 2px;';
     
-    // CONEXIÓN CORREGIDA
+    // Función para pintar el botón rojo o naranja según si hay pausa o no
+    function updateBtnStyle() {
+        if (window.emergencyStopped) {
+            btn.innerHTML = '▶ RESUME SYSTEM';
+            btn.style.cssText = 'background: #ffaa00; color: white; border: none; padding: 4px 12px; margin-right: 15px; cursor: pointer; font-weight: bold; font-family: "Share Tech Mono", monospace; letter-spacing: 1px; border-radius: 2px;';
+        } else {
+            btn.innerHTML = '⚠ EMERGENCY STOP';
+            btn.style.cssText = 'background: #ff2a2a; color: white; border: none; padding: 4px 12px; margin-right: 15px; cursor: pointer; font-weight: bold; font-family: "Share Tech Mono", monospace; letter-spacing: 1px; border-radius: 2px;';
+        }
+    }
+    
+    updateBtnStyle(); // Pintar el botón la primera vez
+    
+    // Al hacer clic, simplemente encendemos o apagamos la "Pausa Global"
     btn.onclick = function() { 
-      if (confirm('CONFIRM CRITICAL SYSTEM HALT?\nThis action will stop all agents immediately.')) {
-        if (typeof triggerEmergencyStop === 'function') {
-          triggerEmergencyStop();
+      if (window.emergencyStopped) {
+        if (confirm('ALL CLEAR?\nResume normal operations?')) {
+          window.emergencyStopped = false; // QUITAMOS LA PAUSA
+          updateBtnStyle();
+          if (typeof addLiveEvent === 'function') addLiveEvent(currentMission, 'Emergency lifted. Resuming operations.', 'ok', 'SUPERVISOR');
+        }
+      } 
+      else {
+        if (confirm('CONFIRM CRITICAL SYSTEM HALT?\nThis action will stop all agents immediately.')) {
+          window.emergencyStopped = true; // PONEMOS LA PAUSA
+          updateBtnStyle();
+          if (typeof addLiveEvent === 'function') addLiveEvent(currentMission, 'CRITICAL HALT initiated.', 'danger', 'SUPERVISOR');
         }
       }
     };
     document.querySelector('.topbar-right').prepend(btn);
   }
+
+  var viewerStyles = document.getElementById('viewer-styles');
+  if (viewerStyles) viewerStyles.remove();
 
   if (role === 'VIEWER') {
     var style = document.createElement('style');
@@ -177,4 +207,11 @@ function doLogout() {
   if (eStop) eStop.remove();
   var viewerStyles = document.getElementById('viewer-styles');
   if (viewerStyles) viewerStyles.remove();
+
+  // Resetear la emergencia por si salen con ella puesta
+  window.emergencyStopped = false;
+
+  // --- ACTUALIZAR CHAT AL SALIR ---
+  currentRole = null;
+  if (typeof updateChatUI === 'function') updateChatUI();
 }

@@ -1,5 +1,5 @@
 // ============================================================
-//  DASHBOARD — Rendering, actions, events, override modal (HITL)
+//  DASHBOARD — Rendering, actions, events, override modal, chat
 // ============================================================
 var currentMission       = 0;
 var currentOverrideEvent = null;
@@ -11,12 +11,11 @@ function initDashboard() {
   renderMissionList();
   selectMission(0, null);
 
-  // --- ARREGLO MAPA 2D ---
+  // --- INICIAR MAPA 2D ---
   if (typeof initCanvas === 'function') initCanvas();
 
-  // --- MOSTRAR CHAT AL ENTRAR ---
-  var chatWidget = document.getElementById('chat-widget');
-  if (chatWidget) chatWidget.style.display = 'flex';
+  // --- CONFIGURAR CHAT SEGÚN ROL AL ENTRAR ---
+  updateChatUI();
 
   // --- COMPROBAR GAFAS VR ---
   checkVRSupport();
@@ -67,7 +66,7 @@ function selectMission(idx, tabEl) {
   
   renderActionLane();
   renderGates();
-  if (typeof renderTacticalMap === 'function') renderTacticalMap(); // Refresca el radar 2D
+  if (typeof renderTacticalMap === 'function') renderTacticalMap(); 
   renderContext();
   renderEvents();
   updateMapLabel();
@@ -95,7 +94,7 @@ function renderActionLane() {
   MISSIONS[currentMission].actions.forEach(function(a){
     var el = document.createElement('div');
     el.className = 'action-item';
-    var canStart = a.state === 'planned' && currentRole !== 'VIEWER';
+    var canStart = a.state === 'planned' && typeof currentRole !== 'undefined' && currentRole !== 'VIEWER';
     el.innerHTML = '<div class="action-item-top">'
       + '<div class="action-name">' + a.name + '</div>'
       + '<span class="action-state state-' + a.state + '">' + a.state.toUpperCase() + '</span>'
@@ -151,7 +150,7 @@ function renderEvents() {
       + '<div class="event-body"><div class="event-msg ' + ev.type + '">' + ev.msg + '</div>'
       + '<div class="event-source">' + ev.source + '</div></div>';
     
-    if (!ev.acked && currentRole !== 'VIEWER') {
+    if (!ev.acked && typeof currentRole !== 'undefined' && currentRole !== 'VIEWER') {
       var ab = document.createElement('button');
       ab.style = "background:transparent; border:1px solid #5a7b8c; color:#5a7b8c; cursor:pointer; font-family:inherit; font-size:9px; padding:2px 5px; margin-left:5px;";
       ab.textContent = 'ACK';
@@ -162,7 +161,7 @@ function renderEvents() {
       el.appendChild(ab);
     }
     
-    if (ev.override && !ev.acked && currentRole === 'SUPERVISOR') {
+    if (ev.override && !ev.acked && typeof currentRole !== 'undefined' && currentRole === 'SUPERVISOR') {
       var ob = document.createElement('button');
       ob.style = "background:var(--danger); border:none; color:white; cursor:pointer; font-family:inherit; font-size:9px; padding:2px 5px; margin-left:5px;";
       ob.textContent = 'REVIEW';
@@ -191,7 +190,7 @@ function startAction(mIdx, actionId) {
   var agent = m.agents.find(function(x){ return x.id === a.agent; });
   if (agent) agent.state = 'running';
   
-  // ¡ESTA LÍNEA ES LA CLAVE PARA QUE SE MUEVAN! Despierta la misión.
+  // Despertar la misión para que se mueva en el mapa
   m.status = 'running'; 
 
   renderActionLane();
@@ -222,6 +221,7 @@ function closeModal(decision) {
     if (decision === 'APPROVED') {
       m.agents.forEach(function(ag) { if (ag.state === 'blocked') ag.state = 'running'; });
       m.actions.forEach(function(act) { if (act.state === 'blocked') act.state = 'running'; });
+      m.status = 'running'; // Reactivar la misión general
       addLiveEvent(currentMission, 'Override APPROVED. Note: "' + comment + '"', 'ok', 'SUPERVISOR');
     } else {
       addLiveEvent(currentMission, 'Override REJECTED. Note: "' + comment + '"', 'danger', 'SUPERVISOR');
@@ -243,7 +243,6 @@ function showToast(msg) {
   setTimeout(function(){ t.classList.remove('show'); }, 2500);
 }
 
-// --- BLOQUEO AUTOMÁTICO DE VR ---
 function checkVRSupport() {
   var vrBtn = document.querySelector('.btn-vr');
   if (!vrBtn) return;
@@ -253,11 +252,7 @@ function checkVRSupport() {
     vrBtn.style.opacity = '0.3';
     vrBtn.style.cursor = 'not-allowed';
     vrBtn.title = reason;
-    
-    // El aviso salta 1.5s después de loguearse
-    setTimeout(function() { 
-        showToast('⚠ ' + reason); 
-    }, 1500);
+    setTimeout(function() { showToast('⚠ ' + reason); }, 1500);
   }
 
   if (navigator.xr) {
@@ -269,4 +264,42 @@ function checkVRSupport() {
   } else {
     disableVRButton('VR NOT SUPPORTED — Browser lacks WebXR');
   }
+}
+
+// --- ACTUALIZAR CHAT SEGÚN EL ROL ---
+function updateChatUI() {
+    var chatWidget = document.getElementById('chat-widget');
+    if (!chatWidget) return;
+
+    var chatInput = document.querySelector('#chat-widget input'); 
+    var chatHeader = document.querySelector('#chat-widget .chat-header') || chatWidget.firstElementChild;
+
+    // 1. Si no hay rol (pantalla de login), ocultar el chat
+    if (typeof currentRole === 'undefined' || !currentRole || currentRole === '') {
+        chatWidget.style.display = 'none';
+        return;
+    }
+
+    // 2. Mostrar chat
+    chatWidget.style.display = 'flex';
+
+    // 3. Permisos y estilos según el rol
+    if (currentRole === 'SUPERVISOR') {
+        chatHeader.style.background = 'rgba(255, 42, 42, 0.15)'; 
+        chatHeader.style.borderBottom = '1px solid #ff2a2a';
+        chatHeader.innerHTML = '<b>⚠ SECURE COMMS (SUPERVISOR)</b>';
+        if (chatInput) { chatInput.disabled = false; chatInput.placeholder = "Send priority order..."; }
+
+    } else if (currentRole === 'OPERATOR') {
+        chatHeader.style.background = 'rgba(0, 255, 157, 0.15)'; 
+        chatHeader.style.borderBottom = '1px solid #00ff9d';
+        chatHeader.innerHTML = '<b>💬 TACTICAL COMMS (OPERATOR)</b>';
+        if (chatInput) { chatInput.disabled = false; chatInput.placeholder = "Acknowledge or command..."; }
+
+    } else { // VIEWER
+        chatHeader.style.background = 'rgba(255, 255, 255, 0.05)'; 
+        chatHeader.style.borderBottom = '1px solid #5a7b8c';
+        chatHeader.innerHTML = '<b>👁 GLOBAL CHAT (READ-ONLY)</b>';
+        if (chatInput) { chatInput.disabled = true; chatInput.placeholder = "View only mode..."; }
+    }
 }
