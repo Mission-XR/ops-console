@@ -11,6 +11,26 @@
     #xr-container { display:none; position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; }
     #xr-container canvas { width:100% !important; height:100% !important; }
     .map-btn.btn-3d.active-view { border-color:#00ff9d; color:#00ff9d; background:rgba(0,255,157,.1); }
+
+    /* --- ESTO ES LO NUEVO QUE DEBES PEGAR --- */
+    #map-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      height: auto !important;
+      padding: 10px;
+    }
+    #map-mission-label {
+      flex: 1;
+      white-space: normal;
+      word-break: break-all;
+      line-height: 1.2;
+    }
+    .map-controls {
+      flex-shrink: 0;
+    }
+    /* ---------------------------------------- */
+
   </style>
 </head>
 <body>

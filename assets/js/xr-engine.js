@@ -393,7 +393,7 @@ function _turbine(x, z, num) {
   _floatLabel('T' + num, x, 12, z, 0x7eb8ff);
 }
 
-// ── Agent meshes ──────────────────────────────────────────────
+// ── Agent meshes (SINCRONIZADOS CON 2D) ─────────────────────────
 
 function _buildAgentMeshes() {
   var agents = MISSIONS[currentMission].agents;
@@ -401,34 +401,63 @@ function _buildAgentMeshes() {
 
   agents.forEach(function(ag){
     var color = colors[ag.state] || 0x00d4ff;
-    // Agent body
+    
+    // 1. Crear un Grupo que contendrá el cubo del robot y su etiqueta
+    var group = new THREE.Group();
+    
+    // 2. El cuerpo del robot
     var geo  = new THREE.BoxGeometry(0.8, 1.2, 0.8);
     var mat  = new THREE.MeshStandardMaterial({ color:color, emissive:color, emissiveIntensity:0.3 });
     var mesh = new THREE.Mesh(geo, mat);
-    // Map % positions to 3D world coords (-15 to 15)
-    mesh.position.set(
-      (ag.x / 100) * 30 - 15,
-      0.6,
-      (ag.y / 100) * 30 - 15
-    );
-    xrScene.add(mesh);
-    _floatLabel(ag.id, mesh.position.x, 2.2, mesh.position.z, color);
-    xrAgentMeshes.push({ mesh:mesh, ag:ag, color:color, t:Math.random()*Math.PI*2 });
+    mesh.position.y = 0.6; // Lo elevamos un poco del suelo
+    group.add(mesh);
+    
+    // 3. Crear la etiqueta flotante manualmente y meterla en el grupo
+    var canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 48;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'rgba(5,10,15,0.85)';
+    ctx.fillRect(0, 0, 256, 48);
+    ctx.strokeStyle = '#' + color.toString(16).padStart(6,'0');
+    ctx.lineWidth = 1;
+    ctx.strokeRect(1, 1, 254, 46);
+    ctx.fillStyle  = '#' + color.toString(16).padStart(6,'0');
+    ctx.font       = 'bold 14px Share Tech Mono, monospace';
+    ctx.textAlign  = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(ag.id, 128, 24);
+    
+    var tex = new THREE.CanvasTexture(canvas);
+    var matSprite = new THREE.SpriteMaterial({ map:tex, transparent:true });
+    var sprite = new THREE.Sprite(matSprite);
+    sprite.scale.set(5, 1, 1);
+    sprite.position.set(0, 2.2, 0); // La etiqueta va encima del cubo
+    group.add(sprite);
+
+    // 4. Añadir el grupo a la escena
+    xrScene.add(group);
+    
+    // Guardar referencia para animarlo
+    xrAgentMeshes.push({ group:group, mesh:mesh, ag:ag, color:color, t:Math.random()*Math.PI*2 });
   });
 }
 
-// ── Render loop ───────────────────────────────────────────────
+// ── Render loop (ACTUALIZACIÓN EN TIEMPO REAL) ──────────────────
 
 function _startLoop() {
   function loop() {
     xrAnimId = requestAnimationFrame(loop);
     var delta = xrClock ? xrClock.getDelta() : 0.016;
 
-    // Animate agent meshes (hover effect)
     xrAgentMeshes.forEach(function(a){
+      // A. Animación estética (el robot flota y gira un poco)
       a.t += delta * 1.5;
       a.mesh.position.y = 0.6 + Math.sin(a.t) * 0.15;
       a.mesh.rotation.y += delta * 0.5;
+
+      // B. SINCRONIZACIÓN MATEMÁTICA CON EL 2D
+      // Mapeamos los porcentajes (0-100) al mundo 3D (-15 a +15)
+      a.group.position.x = (a.ag.x / 100) * 30 - 15;
+      a.group.position.z = (a.ag.y / 100) * 30 - 15;
     });
 
     xrRenderer.render(xrScene, xrCamera);

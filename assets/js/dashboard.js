@@ -12,16 +12,16 @@ function initDashboard() {
   selectMission(0, null);
 
   // --- ARREGLO MAPA 2D ---
-  // Encendemos el radar al iniciar el dashboard
   if (typeof initCanvas === 'function') initCanvas();
 
-  // --- MOSTRAR CHAT ---
-  // Mostramos el chat que estaba oculto en la pantalla de login
+  // --- MOSTRAR CHAT AL ENTRAR ---
   var chatWidget = document.getElementById('chat-widget');
   if (chatWidget) chatWidget.style.display = 'flex';
 
+  // --- COMPROBAR GAFAS VR ---
   checkVRSupport();
 
+  // Evento simulado de prueba a los 10s
   setTimeout(function(){
     addLiveEvent(0, 'UAS-01 battery below 60% — consider swap', 'warn', 'UAS-01');
   }, 10000);
@@ -67,7 +67,7 @@ function selectMission(idx, tabEl) {
   
   renderActionLane();
   renderGates();
-  if (typeof renderAgents === 'function') renderAgents();
+  if (typeof renderTacticalMap === 'function') renderTacticalMap(); // Refresca el radar 2D
   renderContext();
   renderEvents();
   updateMapLabel();
@@ -80,7 +80,7 @@ function selectMission(idx, tabEl) {
 function updateMapLabel() {
   var m  = MISSIONS[currentMission];
   var el = document.getElementById('map-mission-label');
-  if (el) el.innerHTML = 'ID: ' + m.id;
+  if (el) el.innerHTML = 'SYSTEM_ID: ' + m.id;
   
   var latEl = document.getElementById('map-coords');
   var lonEl = document.getElementById('map-coords2');
@@ -114,8 +114,8 @@ function renderGates() {
   lane.innerHTML = '';
   MISSIONS[currentMission].gates.forEach(function(g){
     var el = document.createElement('div');
-    el.className = 'action-item'; // Usamos estilo similar a action lane
-    var stCls = g.status === 'open' ? 'ok' : 'warn';
+    el.className = 'action-item'; 
+    var stCls = (g.status === 'open' || g.status === 'OPEN') ? 'ok' : 'warn';
     el.innerHTML = '<div class="action-item-top">'
       + '<div class="action-name" style="font-size:10px;">' + g.text + '</div>'
       + '<span class="action-state ' + stCls + '">' + g.status.toUpperCase() + '</span>'
@@ -131,7 +131,7 @@ function renderContext() {
   MISSIONS[currentMission].context.forEach(function(c){
     var row = document.createElement('div');
     row.className = 'ctx-row';
-    row.style = "display:flex; justify-content:space-between; width:100%; font-size:11px; margin-bottom:4px;";
+    row.style = "display:flex; justify-content:space-between; width:100%; font-size:11px; margin-bottom:4px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05);";
     row.innerHTML = '<span style="color:var(--text-dim);">' + c.key + '</span><span class="' + (c.cls || '') + '">' + c.val + '</span>';
     cont.appendChild(row);
   });
@@ -186,18 +186,23 @@ function startAction(mIdx, actionId) {
   var a = m.actions.find(function(x){ return x.id === actionId; });
   if (!a) return;
   if (!confirm('START: ' + a.name + '\nConfirm deployment?')) return;
+  
   a.state = 'running';
   var agent = m.agents.find(function(x){ return x.id === a.agent; });
   if (agent) agent.state = 'running';
+  
+  // ¡ESTA LÍNEA ES LA CLAVE PARA QUE SE MUEVAN! Despierta la misión.
+  m.status = 'running'; 
+
   renderActionLane();
-  if (typeof renderAgents === 'function') renderAgents();
+  if (typeof renderTacticalMap === 'function') renderTacticalMap();
   showToast(a.agent + ' STARTED');
 }
 
 function openOverrideModal(ev) {
   currentOverrideEvent = ev;
   document.getElementById('modal-title').textContent = '⚠ OVERRIDE REQUEST';
-  document.getElementById('modal-body').innerHTML = ev.msg;
+  document.getElementById('modal-body').innerHTML = ev.overrideBody || ev.msg;
   document.getElementById('modal-comment').value = '';
   document.getElementById('modal-overlay').classList.add('show');
 }
@@ -205,21 +210,29 @@ function openOverrideModal(ev) {
 function closeModal(decision) {
   var comment = document.getElementById('modal-comment').value.trim();
   if (decision === 'APPROVED' && !comment) {
-    alert('Mandatory comment required.');
+    alert('Mandatory comment required for audit trail.');
     return;
   }
   document.getElementById('modal-overlay').classList.remove('show');
+  
   if (currentOverrideEvent) {
     currentOverrideEvent.acked = true;
+    var m = MISSIONS[currentMission];
+
     if (decision === 'APPROVED') {
-      var m = MISSIONS[currentMission];
       m.agents.forEach(function(ag) { if (ag.state === 'blocked') ag.state = 'running'; });
       m.actions.forEach(function(act) { if (act.state === 'blocked') act.state = 'running'; });
+      addLiveEvent(currentMission, 'Override APPROVED. Note: "' + comment + '"', 'ok', 'SUPERVISOR');
+    } else {
+      addLiveEvent(currentMission, 'Override REJECTED. Note: "' + comment + '"', 'danger', 'SUPERVISOR');
     }
   }
+  
+  currentOverrideEvent = null;
   renderEvents();
   renderActionLane();
-  if (typeof renderAgents === 'function') renderAgents();
+  if (typeof renderTacticalMap === 'function') renderTacticalMap();
+  showToast('Override ' + decision);
 }
 
 function showToast(msg) {
@@ -230,6 +243,30 @@ function showToast(msg) {
   setTimeout(function(){ t.classList.remove('show'); }, 2500);
 }
 
+// --- BLOQUEO AUTOMÁTICO DE VR ---
 function checkVRSupport() {
-  // Lógica de detección WebXR
+  var vrBtn = document.querySelector('.btn-vr');
+  if (!vrBtn) return;
+
+  function disableVRButton(reason) {
+    vrBtn.disabled = true;
+    vrBtn.style.opacity = '0.3';
+    vrBtn.style.cursor = 'not-allowed';
+    vrBtn.title = reason;
+    
+    // El aviso salta 1.5s después de loguearse
+    setTimeout(function() { 
+        showToast('⚠ ' + reason); 
+    }, 1500);
+  }
+
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported('immersive-vr').then(function(supported) {
+      if (!supported) disableVRButton('VR NOT DETECTED — Headset required');
+    }).catch(function() { 
+      disableVRButton('VR ERROR — Access denied'); 
+    });
+  } else {
+    disableVRButton('VR NOT SUPPORTED — Browser lacks WebXR');
+  }
 }
