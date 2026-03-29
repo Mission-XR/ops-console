@@ -11,6 +11,15 @@ var failedAttempts = 0;
 var blockedUntil   = null;
 var currentRole    = 'OPERATOR';
 
+// 1. COMPROBAR SESIÓN AL CARGAR LA PÁGINA (Persistencia)
+window.onload = function() {
+  var savedSession = localStorage.getItem('ops_user_session');
+  if (savedSession) {
+    var sessionData = JSON.parse(savedSession);
+    showDashboard(sessionData.role, sessionData.user);
+  }
+};
+
 document.getElementById('demo-sup').onclick  = function(){ fillDemo('supervisor@ops.net','super123'); };
 document.getElementById('demo-op').onclick   = function(){ fillDemo('operator@ops.net','oper123'); };
 document.getElementById('demo-view').onclick = function(){ fillDemo('viewer@ops.net','view123'); };
@@ -69,20 +78,93 @@ function authenticate(u, p, btn) {
   failedAttempts = 0;
   currentRole = ud.role;
   showAlert('Access granted — Role: ' + ud.role, 'info');
+
+  // GUARDAR SESIÓN EN LOCALSTORAGE
+  localStorage.setItem('ops_user_session', JSON.stringify({ user: u, role: ud.role }));
+
   setTimeout(function(){ showDashboard(ud.role, u); }, 800);
 }
 
+// ============================================================
+// HITO 2: LA PANTALLA DE CARGA AL 100%
+// ============================================================
 function showDashboard(role, user) {
+  // 1. Ocultar login
   document.getElementById('login-screen').style.display = 'none';
-  var d = document.getElementById('dashboard-screen');
-  d.style.display = 'flex';
-  currentRole = role;
-  document.getElementById('role-badge').textContent = role;
-  document.getElementById('user-avatar').textContent = user.charAt(0).toUpperCase();
-  initDashboard();
+  
+  // 2. Mostrar la pantalla negra de carga que metimos en el HTML
+  var loadingOverlay = document.getElementById('loading-overlay');
+  if (loadingOverlay) {
+    loadingOverlay.style.display = 'flex';
+  }
+
+  var progress = 0;
+  var bar = document.getElementById('loader-bar');
+  var txt = document.getElementById('loader-text');
+
+  // 3. Animación: hacer que los números suban hasta 100
+  var interval = setInterval(function() {
+    progress += Math.floor(Math.random() * 15) + 5; // Sube a saltos
+    
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(interval);
+      
+      // Cuando llega a 100, espera medio segundo, oculta la carga y te deja entrar al panel
+      setTimeout(function() {
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        
+        var d = document.getElementById('dashboard-screen');
+        d.style.display = 'flex';
+        
+        currentRole = role;
+        document.getElementById('role-badge').textContent = role;
+        document.getElementById('user-avatar').textContent = user.charAt(0).toUpperCase();
+        
+        applyRoleUI(role);
+        initDashboard();
+      }, 500); 
+    }
+    
+    // Actualizar visualmente la barra y el porcentaje
+    if (bar) bar.style.width = progress + '%';
+    if (txt) txt.textContent = 'LOADING ASSETS... ' + progress + '%';
+  }, 100); 
+}
+
+
+function applyRoleUI(role) {
+  var eStop = document.getElementById('btn-emergency-stop');
+  if (eStop) eStop.remove();
+
+  if (role === 'SUPERVISOR') {
+    var btn = document.createElement('button');
+    btn.id = 'btn-emergency-stop';
+    btn.innerHTML = '⚠ EMERGENCY STOP';
+    btn.style.cssText = 'background: #ff2a2a; color: white; border: none; padding: 4px 12px; margin-right: 15px; cursor: pointer; font-weight: bold; font-family: "Share Tech Mono", monospace; letter-spacing: 1px; border-radius: 2px;';
+    
+    // CONEXIÓN CORREGIDA
+    btn.onclick = function() { 
+      if (confirm('CONFIRM CRITICAL SYSTEM HALT?\nThis action will stop all agents immediately.')) {
+        if (typeof triggerEmergencyStop === 'function') {
+          triggerEmergencyStop();
+        }
+      }
+    };
+    document.querySelector('.topbar-right').prepend(btn);
+  }
+
+  if (role === 'VIEWER') {
+    var style = document.createElement('style');
+    style.id = 'viewer-styles';
+    style.innerHTML = '.ack-btn { opacity: 0.3 !important; pointer-events: none !important; }';
+    document.head.appendChild(style);
+  }
 }
 
 function doLogout() {
+  localStorage.removeItem('ops_user_session');
+
   document.getElementById('dashboard-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('input-user').value = '';
@@ -90,6 +172,9 @@ function doLogout() {
   document.getElementById('btn-login').disabled = false;
   document.getElementById('btn-login').classList.remove('loading');
   hideAlert();
+
+  var eStop = document.getElementById('btn-emergency-stop');
+  if (eStop) eStop.remove();
+  var viewerStyles = document.getElementById('viewer-styles');
+  if (viewerStyles) viewerStyles.remove();
 }
-
-

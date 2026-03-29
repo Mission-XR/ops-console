@@ -14,6 +14,22 @@
   </style>
 </head>
 <body>
+
+<style>
+  #loading-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#050a0f; z-index:9999; flex-direction:column; align-items:center; justify-content:center; font-family:'Share Tech Mono', monospace; color:#00ff9d; }
+  .loader-content { width:300px; text-align:center; }
+  .loader-title { font-size:16px; letter-spacing:2px; margin-bottom:20px; color:#fff; }
+  .loader-bar-bg { width:100%; height:2px; background:rgba(0,255,157,0.2); position:relative; overflow:hidden; }
+  .loader-bar-fill { height:100%; width:0%; background:#00ff9d; box-shadow:0 0 10px #00ff9d; transition:width 0.1s; }
+  .loader-text { margin-top:10px; font-size:12px; letter-spacing:1px; }
+</style>
+<div id="loading-overlay">
+  <div class="loader-content">
+    <div class="loader-title">INITIALIZING 3D ENVIRONMENT</div>
+    <div class="loader-bar-bg"><div class="loader-bar-fill" id="loader-bar"></div></div>
+    <div class="loader-text" id="loader-text">LOADING ASSETS... 0%</div>
+  </div>
+</div>
 <div id="login-screen">
   <div class="bg-pulse"></div>
   <div class="login-box">
@@ -93,32 +109,36 @@
   </div>
 </div>
 <div id="toast"></div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="assets/js/data.js"></script>
 <script src="assets/js/map.js"></script>
 <script src="assets/js/xr-engine.js"></script>
 <script src="assets/js/dashboard.js"></script>
 <script src="assets/js/auth.js"></script>
+
+<script src="assets/js/telemetry.js"></script> 
+
 <script>
 function on2D() {
-  exitXR();
+  if (typeof exitXR === 'function') exitXR();
   document.querySelectorAll('.map-btn').forEach(function(b){ b.classList.remove('active-view'); });
   document.querySelector('.btn-2d').classList.add('active-view');
 }
 function on3D() {
-  if (xrActive) { refreshXRScene(); return; }
+  if (typeof xrActive !== 'undefined' && xrActive) { if (typeof refreshXRScene === 'function') refreshXRScene(); return; }
   document.querySelectorAll('.map-btn').forEach(function(b){ b.classList.remove('active-view'); });
   document.querySelector('.btn-3d').classList.add('active-view');
-  enterXR();
+  if (typeof enterXR === 'function') enterXR();
 }
 function onVR() {
-  if (!xrActive) { on3D(); }
+  if (typeof xrActive === 'undefined' || !xrActive) { on3D(); }
   if (navigator.xr) {
     navigator.xr.isSessionSupported('immersive-vr').then(function(supported){
       if (supported) {
-        xrRenderer.xr.enabled = true;
+        if (typeof xrRenderer !== 'undefined' && xrRenderer.xr) xrRenderer.xr.enabled = true;
         navigator.xr.requestSession('immersive-vr').then(function(session){
-          xrRenderer.xr.setSession(session);
+          if (typeof xrRenderer !== 'undefined' && xrRenderer.xr) xrRenderer.xr.setSession(session);
           showToast('VR SESSION ACTIVE — put on headset');
         });
       } else {

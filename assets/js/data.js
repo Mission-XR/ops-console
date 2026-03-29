@@ -1,5 +1,5 @@
 // ============================================================
-//  MISSION DATA — 5 complete missions from the spec
+//  MISSION DATA — 5 complete missions from the spec (FIXED COORDS)
 // ============================================================
 var MISSIONS = [
   {
@@ -10,13 +10,13 @@ var MISSIONS = [
     tagLabel: 'INFRASTRUCTURE',
     status: 'running',
     goal: 'Locate flood-related damage to roads and bridges, mark critical sections, deploy mobile relays.',
-    coords: { lat:'47.3769° N', lon:'15.0908° E' },
+    coords: { lat: 47.3769, lon: 15.0908 }, // <- CORREGIDO (Sin letras)
     agents: [
-      { id:'UAS-01',   type:'Unmanned Aerial System',  icon:'✈',  x:38, y:32, state:'running', battery:62,   task:'AerialScan Sector North',     capabilities:['NavigateTo','AerialScan','LiveVideo','DropPayload','ActAsRelay'] },
-      { id:'UGV-02',   type:'Unmanned Ground Vehicle', icon:'🚙', x:55, y:58, state:'blocked', battery:88,   task:'PlaceBeacon WP-07 (blocked)', capabilities:['NavigateTo','PlaceBeacon','InspectObject','DeliverSmallPayload'] },
-      { id:'VISION-02',type:'CV/Sensing Agent',        icon:'👁',  x:42, y:63, state:'running', battery:null, task:'DetectDamage CV Analysis',    capabilities:['DetectDamage','HotspotDetection','PPEComplianceCheck'] },
-      { id:'LLM-01',   type:'AI/LLM Agent',            icon:'🤖', x:65, y:40, state:'planned', battery:null, task:'GenerateBriefing (pending)',   capabilities:['AnalyzeImages','SummarizeTelemetry','GenerateBriefing','ProposeReplan'] },
-      { id:'OPS-HUMAN',type:'Human Operator/HITL',     icon:'👤',  x:25, y:70, state:'running', battery:null, task:'Marking findings on AR map',   capabilities:['ApproveOverride','ManualAdjustWaypoints','ClaimHITLTask'] },
+      { id:'UAS-01',   type:'uav',   icon:'✈',  x:38, y:32, state:'running', battery:62,   task:'AerialScan Sector North',    capabilities:['NavigateTo','AerialScan','LiveVideo','DropPayload','ActAsRelay'] },
+      { id:'UGV-02',   type:'ugv', icon:'🚙', x:55, y:58, state:'blocked', battery:88,   task:'PlaceBeacon WP-07 (blocked)', capabilities:['NavigateTo','PlaceBeacon','InspectObject','DeliverSmallPayload'] },
+      { id:'VISION-02',type:'vision',        icon:'👁',  x:42, y:63, state:'running', battery:null, task:'DetectDamage CV Analysis',    capabilities:['DetectDamage','HotspotDetection','PPEComplianceCheck'] },
+      { id:'LLM-01',   type:'vision',            icon:'🤖', x:65, y:40, state:'planned', battery:null, task:'GenerateBriefing (pending)',   capabilities:['AnalyzeImages','SummarizeTelemetry','GenerateBriefing','ProposeReplan'] },
+      { id:'OPS-HUMAN',type:'vision',     icon:'👤',  x:25, y:70, state:'running', battery:null, task:'Marking findings on AR map',   capabilities:['ApproveOverride','ManualAdjustWaypoints','ClaimHITLTask'] },
     ],
     actions: [
       { id:'A1', name:'AerialScan — Sector North',   agent:'UAS-01',    state:'done',    dep:null, note:'Coverage ≥95%' },
@@ -56,20 +56,20 @@ var MISSIONS = [
     tagLabel: 'HOSPITAL',
     status: 'planned',
     goal: 'Time-critical material movements between buildings, check access routes, support navigation.',
-    coords: { lat:'47.3821° N', lon:'15.0944° E' },
+    coords: { lat: 47.3821, lon: 15.0944 }, // <- CORREGIDO
     agents: [
-      { id:'UGV-02',   type:'Unmanned Ground Vehicle', icon:'🚙', x:45, y:50, state:'planned', battery:95,   task:'Deliver payload Building A→C',  capabilities:['NavigateTo','PlaceBeacon','DeliverSmallPayload'] },
-      { id:'UAS-01',   type:'Unmanned Aerial System',  icon:'✈',  x:60, y:30, state:'planned', battery:78,   task:'Aerial video at bottlenecks',   capabilities:['NavigateTo','AerialScan','LiveVideo'] },
-      { id:'HUM-03',   type:'Service/Rescue Robot',    icon:'🦾', x:35, y:60, state:'planned', battery:null, task:'Open secured doors Gate 3',     capabilities:['NavigateTo','OpenDoor','TurnValve','PickPlace','SecureArea'] },
-      { id:'VISION-02',type:'CV/Sensing Agent',        icon:'👁',  x:70, y:55, state:'planned', battery:null, task:'Route clearance evaluation',    capabilities:['DetectDamage','HotspotDetection','PPEComplianceCheck'] },
-      { id:'OPS-HUMAN',type:'Human Operator/HITL',     icon:'👤',  x:50, y:75, state:'planned', battery:null, task:'Monitoring transport route',    capabilities:['ApproveOverride','ManualAdjustWaypoints'] },
+      { id:'UGV-02',   type:'ugv', icon:'🚙', x:45, y:50, state:'planned', battery:95,   task:'Deliver payload Building A→C',  capabilities:['NavigateTo','PlaceBeacon','DeliverSmallPayload'] },
+      { id:'UAS-01',   type:'uav',  icon:'✈',  x:60, y:30, state:'planned', battery:78,   task:'Aerial video at bottlenecks',   capabilities:['NavigateTo','AerialScan','LiveVideo'] },
+      { id:'HUM-03',   type:'ugv',    icon:'🦾', x:35, y:60, state:'planned', battery:null, task:'Open secured doors Gate 3',     capabilities:['NavigateTo','OpenDoor','TurnValve','PickPlace','SecureArea'] },
+      { id:'VISION-02',type:'vision',        icon:'👁',  x:70, y:55, state:'planned', battery:null, task:'Route clearance evaluation',    capabilities:['DetectDamage','HotspotDetection','PPEComplianceCheck'] },
+      { id:'OPS-HUMAN',type:'vision',     icon:'👤',  x:50, y:75, state:'planned', battery:null, task:'Monitoring transport route',    capabilities:['ApproveOverride','ManualAdjustWaypoints'] },
     ],
     actions: [
       { id:'B1', name:'ValidatePath — Bldg A→C',        agent:'VISION-02', state:'planned', dep:null, note:'GeoZone + closure check' },
       { id:'B2', name:'OpenDoor — Gate 3',               agent:'HUM-03',    state:'planned', dep:'B1', note:'Operator approval required' },
       { id:'B3', name:'DeliverSmallPayload — Bldg C',   agent:'UGV-02',    state:'planned', dep:'B2', note:'Medical supplies' },
       { id:'B4', name:'LiveVideo — Corridor bottleneck', agent:'UAS-01',    state:'planned', dep:'B1', note:'Feed to OPS-HUMAN' },
-      { id:'B5', name:'PPEComplianceCheck — Staff',     agent:'VISION-02', state:'planned', dep:'B1', note:'Confidence threshold 0.9' },
+      { id:'B5', name:'PPEComplianceCheck — Staff',      agent:'VISION-02', state:'planned', dep:'B1', note:'Confidence threshold 0.9' },
     ],
     gates: [
       { text:'Access clear? (VISION-02 confidence + manual confirmation)', status:'closed' },
@@ -99,13 +99,13 @@ var MISSIONS = [
     tagLabel: 'WILDFIRE',
     status: 'blocked',
     goal: 'Map fire perimeter, mark safe corridors, establish temporary communications coverage.',
-    coords: { lat:'47.3540° N', lon:'15.1120° E' },
+    coords: { lat: 47.3540, lon: 15.1120 }, // <- CORREGIDO
     agents: [
-      { id:'UAS-01',   type:'Unmanned Aerial System', icon:'✈',  x:50, y:38, state:'blocked', battery:45,   task:'Perimeter scan (wind blocked)',  capabilities:['NavigateTo','AerialScan','ActAsRelay'] },
-      { id:'UGV-02',   type:'Unmanned Ground Vehicle',icon:'🚙', x:35, y:65, state:'planned', battery:72,   task:'Deploy UGV ground beacons',      capabilities:['NavigateTo','PlaceBeacon'] },
-      { id:'VISION-02',type:'CV/Sensing Agent',       icon:'👁',  x:62, y:55, state:'planned', battery:null, task:'Hotspot + fire front detection', capabilities:['HotspotDetection','DetectDamage'] },
-      { id:'LLM-01',   type:'AI/LLM Agent',           icon:'🤖', x:45, y:70, state:'planned', battery:null, task:'Generate sector report',         capabilities:['AnalyzeImages','GenerateBriefing','ProposeReplan'] },
-      { id:'OPS-HUMAN',type:'Human Operator/HITL',    icon:'👤',  x:25, y:45, state:'running', battery:null, task:'Drawing evacuation corridors',   capabilities:['ApproveOverride','ManualAdjustWaypoints'] },
+      { id:'UAS-01',   type:'uav', icon:'✈',  x:50, y:38, state:'blocked', battery:45,   task:'Perimeter scan (wind blocked)',  capabilities:['NavigateTo','AerialScan','ActAsRelay'] },
+      { id:'UGV-02',   type:'ugv',icon:'🚙', x:35, y:65, state:'planned', battery:72,   task:'Deploy UGV ground beacons',      capabilities:['NavigateTo','PlaceBeacon'] },
+      { id:'VISION-02',type:'vision',       icon:'👁',  x:62, y:55, state:'planned', battery:null, task:'Hotspot + fire front detection', capabilities:['HotspotDetection','DetectDamage'] },
+      { id:'LLM-01',   type:'vision',           icon:'🤖', x:45, y:70, state:'planned', battery:null, task:'Generate sector report',         capabilities:['AnalyzeImages','GenerateBriefing','ProposeReplan'] },
+      { id:'OPS-HUMAN',type:'vision',    icon:'👤',  x:25, y:45, state:'running', battery:null, task:'Drawing evacuation corridors',   capabilities:['ApproveOverride','ManualAdjustWaypoints'] },
     ],
     actions: [
       { id:'C1', name:'AerialScan — Grid Alpha (perimeter)', agent:'UAS-01',    state:'blocked', dep:null, note:'Wind > 35km/h blocker' },
@@ -142,13 +142,13 @@ var MISSIONS = [
     tagLabel: 'WAREHOUSE',
     status: 'running',
     goal: 'Rapid stock assessment in zones, automated picking of small items, human approvals for critical picks.',
-    coords: { lat:'47.3690° N', lon:'15.0875° E' },
+    coords: { lat: 47.3690, lon: 15.0875 }, // <- CORREGIDO
     agents: [
-      { id:'UGV-02',   type:'Unmanned Ground Vehicle',icon:'🚙', x:40, y:55, state:'running', battery:80,   task:'Scanning Rack Zone B',           capabilities:['NavigateTo','InspectObject','DeliverSmallPayload','ReadGauge'] },
-      { id:'VISION-02',type:'CV/Sensing Agent',       icon:'👁',  x:55, y:40, state:'running', battery:null, task:'OCR barcode/label validation',   capabilities:['DetectDamage','HotspotDetection','PPEComplianceCheck'] },
-      { id:'LLM-01',   type:'AI/LLM Agent',           icon:'🤖', x:65, y:65, state:'running', battery:null, task:'Reconciliation report draft',     capabilities:['AnalyzeImages','SummarizeTelemetry','GenerateBriefing'] },
-      { id:'HUM-03',   type:'Service/Rescue Robot',   icon:'🦾', x:30, y:40, state:'planned', battery:null, task:'Ambiguous bin intervention',      capabilities:['PickPlace','SecureArea','OpenDoor'] },
-      { id:'OPS-HUMAN',type:'Human Operator/HITL',    icon:'👤',  x:70, y:35, state:'running', battery:null, task:'Reviewing discrepancy report',    capabilities:['ApproveOverride','ClaimHITLTask','ConfirmDoD'] },
+      { id:'UGV-02',   type:'ugv',icon:'🚙', x:40, y:55, state:'running', battery:80,   task:'Scanning Rack Zone B',           capabilities:['NavigateTo','InspectObject','DeliverSmallPayload','ReadGauge'] },
+      { id:'VISION-02',type:'vision',       icon:'👁',  x:55, y:40, state:'running', battery:null, task:'OCR barcode/label validation',   capabilities:['DetectDamage','HotspotDetection','PPEComplianceCheck'] },
+      { id:'LLM-01',   type:'vision',           icon:'🤖', x:65, y:65, state:'running', battery:null, task:'Reconciliation report draft',     capabilities:['AnalyzeImages','SummarizeTelemetry','GenerateBriefing'] },
+      { id:'HUM-03',   type:'ugv',   icon:'🦾', x:30, y:40, state:'planned', battery:null, task:'Ambiguous bin intervention',      capabilities:['PickPlace','SecureArea','OpenDoor'] },
+      { id:'OPS-HUMAN',type:'vision',    icon:'👤',  x:70, y:35, state:'running', battery:null, task:'Reviewing discrepancy report',    capabilities:['ApproveOverride','ClaimHITLTask','ConfirmDoD'] },
     ],
     actions: [
       { id:'D1', name:'ScanRack — Zone A',             agent:'UGV-02',    state:'done',    dep:null, note:'96 items counted' },
@@ -187,13 +187,13 @@ var MISSIONS = [
     tagLabel: 'OFFSHORE',
     status: 'planned',
     goal: 'Visual inspection of multiple turbines, prioritization of defects, temporary relays for data links.',
-    coords: { lat:'54.5260° N', lon:'9.4440° E' },
+    coords: { lat: 54.5260, lon: 9.4440 }, // <- CORREGIDO
     agents: [
-      { id:'UAS-01',   type:'Unmanned Aerial System', icon:'✈',  x:45, y:35, state:'planned', battery:90,   task:'Inspection flights T1-T5',       capabilities:['NavigateTo','AerialScan','LiveVideo','ActAsRelay'] },
-      { id:'VISION-02',type:'CV/Sensing Agent',       icon:'👁',  x:55, y:50, state:'planned', battery:null, task:'Crack/corrosion detection',      capabilities:['DetectDamage','HotspotDetection'] },
-      { id:'UGV-02',   type:'Unmanned Ground Vehicle',icon:'🚙', x:35, y:65, state:'planned', battery:85,   task:'Dock/relay at pier access',       capabilities:['NavigateTo','PlaceBeacon','DeliverSmallPayload'] },
-      { id:'LLM-01',   type:'AI/LLM Agent',           icon:'🤖', x:65, y:60, state:'planned', battery:null, task:'Prioritize defects by severity',  capabilities:['AnalyzeImages','SummarizeTelemetry','ProposeReplan'] },
-      { id:'OPS-HUMAN',type:'Human Operator/HITL',    icon:'👤',  x:70, y:30, state:'planned', battery:null, task:'3D annotation + prioritization', capabilities:['ApproveOverride','ConfirmDoD'] },
+      { id:'UAS-01',   type:'uav', icon:'✈',  x:45, y:35, state:'planned', battery:90,   task:'Inspection flights T1-T5',       capabilities:['NavigateTo','AerialScan','LiveVideo','ActAsRelay'] },
+      { id:'VISION-02',type:'vision',       icon:'👁',  x:55, y:50, state:'planned', battery:null, task:'Crack/corrosion detection',      capabilities:['DetectDamage','HotspotDetection'] },
+      { id:'UGV-02',   type:'ugv',icon:'🚙', x:35, y:65, state:'planned', battery:85,   task:'Dock/relay at pier access',       capabilities:['NavigateTo','PlaceBeacon','DeliverSmallPayload'] },
+      { id:'LLM-01',   type:'vision',           icon:'🤖', x:65, y:60, state:'planned', battery:null, task:'Prioritize defects by severity',  capabilities:['AnalyzeImages','SummarizeTelemetry','ProposeReplan'] },
+      { id:'OPS-HUMAN',type:'vision',    icon:'👤',  x:70, y:30, state:'planned', battery:null, task:'3D annotation + prioritization', capabilities:['ApproveOverride','ConfirmDoD'] },
     ],
     actions: [
       { id:'E1', name:'AerialScan — Turbine T1 (hub+blades)', agent:'UAS-01',    state:'planned', dep:null, note:'Sea weather gate first' },

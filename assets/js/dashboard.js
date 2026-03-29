@@ -11,6 +11,10 @@ function initDashboard() {
   renderMissionList();
   selectMission(0, null);
   initCanvas();
+  
+  // HITO 2: Comprobar soporte VR al iniciar el dashboard
+  checkVRSupport();
+
   setTimeout(function(){
     addLiveEvent(0, 'UAS-01 battery below 60% — consider swap', 'warn', 'UAS-01');
   }, 10000);
@@ -49,16 +53,26 @@ function renderMissionList() {
   });
 }
 
+// ── AQUÍ ESTÁ EL CAMBIO PARA QUE SE ACTUALICE EN 3D/VR ──
 function selectMission(idx, tabEl) {
   currentMission = idx;
+  
   document.querySelectorAll('.mission-tab').forEach(function(t, i){ t.classList.toggle('active', i === idx); });
   document.querySelectorAll('.mission-item').forEach(function(t, i){ t.classList.toggle('active', i === idx); });
+  
   renderActionLane();
   renderGates();
   renderAgents();
   renderContext();
   renderEvents();
   updateMapLabel();
+
+  // Avisar al motor 3D/VR si está encendido para que refresque la vista
+  if (typeof xrActive !== 'undefined' && xrActive) {
+    if (typeof refreshXRScene === 'function') {
+      refreshXRScene(); 
+    }
+  }
 }
 
 function updateMapLabel() {
@@ -197,4 +211,33 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+// ── Comprobación de Hardware VR (HITO 2) ────────────────────
+function checkVRSupport() {
+  var vrBtn = document.querySelector('.btn-vr');
+  if (!vrBtn) return;
+
+  function disableVRButton(reason) {
+    vrBtn.disabled = true;
+    vrBtn.style.opacity = '0.3';
+    vrBtn.style.cursor = 'not-allowed';
+    vrBtn.style.textDecoration = 'line-through';
+    
+    setTimeout(function() {
+      showToast('⚠ ' + reason);
+    }, 1000);
+  }
+
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported('immersive-vr').then(function(supported) {
+      if (!supported) {
+        disableVRButton('VR NOT DETECTED — Headset required');
+      }
+    }).catch(function() {
+      disableVRButton('VR ERROR — Access denied or unavailable');
+    });
+  } else {
+    disableVRButton('VR NOT SUPPORTED — Browser lacks WebXR');
+  }
 }
