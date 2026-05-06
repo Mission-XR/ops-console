@@ -23,16 +23,12 @@ body::after {
 ::-webkit-scrollbar-track { background:var(--bg); }
 ::-webkit-scrollbar-thumb { background:var(--border); }
 .divider { height:1px; background:var(--border); margin:2px 0; flex-shrink:0; }
-
-/* Scenario tags */
 .scenario-tag { font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:1px; padding:2px 5px; border:1px solid; margin-top:3px; display:inline-block; }
 .tag-infra    { color:var(--accent); border-color:rgba(0,212,255,.3); }
 .tag-hospital { color:#ff9fd4; border-color:rgba(255,159,212,.3); }
 .tag-wild     { color:#ff6b2b; border-color:rgba(255,107,43,.3); }
 .tag-ware     { color:#ffd166; border-color:rgba(255,209,102,.3); }
 .tag-offshore { color:#7eb8ff; border-color:rgba(126,184,255,.3); }
-
-/* Toast */
 #toast {
   position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(60px);
   background:var(--panel); border:1px solid var(--accent2); color:var(--accent2);
@@ -40,7 +36,6 @@ body::after {
   z-index:300; transition:transform .3s; pointer-events:none;
 }
 #toast.show { transform:translateX(-50%) translateY(0); }
-
 @keyframes fadein    { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
 @keyframes spin      { to{transform:translate(-50%,-50%) rotate(360deg)} }
 @keyframes bgpulse   { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.5} 50%{transform:translate(-50%,-50%) scale(1.2);opacity:1} }

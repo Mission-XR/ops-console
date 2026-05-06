@@ -1,103 +1,85 @@
 // ============================================================
-//  WS-CLIENT — WebSocket connection to the Python backend
-//  This is "the cable": it receives state from the server
-//  and forwards user actions back.
+//  WS-CLIENT — WebSocket connection to Python backend
 // ============================================================
-
 var WS = {
-  socket: null,
-  connected: false,
-  reconnectDelay: 1000,
+    socket: null,
+    connected: false,
+    reconnectDelay: 1000,
+    _initialised: false,
+    _lastMissionData: null,
 
-  // ── Connect ──────────────────────────────────────────────
-  connect: function () {
-    var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var url = protocol + '//' + location.host + '/ws';
-    console.log('[WS] Connecting to', url);
+    connect: function() {
+        var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var url = proto + '//' + location.host + '/ws';
+        console.log('[WS] Connecting to', url);
+        this.socket = new WebSocket(url);
 
-    this.socket = new WebSocket(url);
+        this.socket.onopen = function() {
+            WS.connected = true; WS.reconnectDelay = 1000;
+            console.log('[WS] Connected');
+            showToast('SERVER LINK ESTABLISHED');
+            if (currentRole) WS.send({type:'login', user:currentUser||'anon', role:currentRole});
+        };
+        this.socket.onmessage = function(evt) {
+            try { WS.handle(JSON.parse(evt.data)); }
+            catch(e) { console.error('[WS] parse error', e); }
+        };
+        this.socket.onclose = function() {
+            WS.connected = false;
+            setTimeout(function() {
+                WS.reconnectDelay = Math.min(WS.reconnectDelay * 2, 8000);
+                WS.connect();
+            }, WS.reconnectDelay);
+        };
+        this.socket.onerror = function(e) { console.error('[WS]', e); };
+    },
 
-    this.socket.onopen = function () {
-      WS.connected = true;
-      WS.reconnectDelay = 1000;
-      console.log('[WS] Connected');
-      if (typeof showToast === 'function') showToast('SERVER LINK ESTABLISHED');
+    send: function(obj) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN)
+            this.socket.send(JSON.stringify(obj));
+    },
 
-      // Tell the server who we are
-      if (typeof currentRole !== 'undefined' && currentRole) {
-        WS.send({
-          type: 'login',
-          user: currentUser || 'anon',
-          role: currentRole,
-        });
-      }
-    };
+    handle: function(msg) {
+        switch(msg.type) {
+        case 'state':
+            // Always update global mission data (positions, context, etc.)
+            MISSIONS = msg.missions;
+            emergencyStopped = msg.emergency;
+            onlineUsers = msg.users || [];
 
-    this.socket.onmessage = function (evt) {
-      try {
-        var msg = JSON.parse(evt.data);
-        WS.handleMessage(msg);
-      } catch (e) {
-        console.error('[WS] Bad message', e);
-      }
-    };
+            // First time: load chat history + build all panels
+            if (!WS._initialised) {
+                WS._initialised = true;
+                if (msg.chat_history && msg.chat_history.length) {
+                    msg.chat_history.forEach(function(e) { appendChatEntry(e); });
+                }
+                renderPanels();
+            }
+            // Every tick: update context vars + events (they change with telemetry)
+            renderContext();
+            renderEvents();
+            renderPresence();
+            break;
 
-    this.socket.onclose = function () {
-      WS.connected = false;
-      console.log('[WS] Disconnected — retrying in', WS.reconnectDelay, 'ms');
-      setTimeout(function () {
-        WS.reconnectDelay = Math.min(WS.reconnectDelay * 2, 10000);
-        WS.connect();
-      }, WS.reconnectDelay);
-    };
+        case 'chat':
+            if (msg.entry) appendChatEntry(msg.entry);
+            break;
 
-    this.socket.onerror = function (err) {
-      console.error('[WS] Error', err);
-    };
-  },
+        case 'toast':
+            showToast(msg.msg);
+            renderPanels(); // Something changed (action started, override, etc.)
+            break;
 
-  // ── Send a message to the backend ────────────────────────
-  send: function (obj) {
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify(obj));
-    }
-  },
+        case 'emergency':
+            emergencyStopped = msg.stopped;
+            updateEmergencyButton();
+            renderPanels();
+            break;
 
-  // ── Route incoming messages ──────────────────────────────
-  handleMessage: function (msg) {
-    switch (msg.type) {
-      case 'state':
-        // Full state tick — update everything
-        MISSIONS = msg.missions;
-        emergencyStopped = msg.emergency;
-        onlineUsers = msg.users || [];
-        if (typeof renderAll === 'function') renderAll();
-        break;
-
-      case 'chat':
-        if (typeof appendChatFromServer === 'function') {
-          appendChatFromServer(msg.entry);
+        case 'presence':
+            onlineUsers = msg.users || [];
+            renderPresence();
+            break;
         }
-        break;
-
-      case 'toast':
-        if (typeof showToast === 'function') showToast(msg.msg);
-        break;
-
-      case 'emergency':
-        emergencyStopped = msg.stopped;
-        if (typeof updateEmergencyButton === 'function')
-          updateEmergencyButton();
-        break;
-
-      case 'user_joined':
-      case 'user_left':
-        onlineUsers = msg.users || [];
-        if (typeof renderPresence === 'function') renderPresence();
-        break;
-
-      default:
-        console.log('[WS] Unknown message type:', msg.type);
     }
-  },
 };
