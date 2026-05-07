@@ -8,44 +8,37 @@
   <link rel="stylesheet" href="assets/css/login.css">
   <link rel="stylesheet" href="assets/css/dashboard.css">
   <style>
-    #xr-container { display:none; position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; }
-    #xr-container canvas { width:100% !important; height:100% !important; }
+    #xr-container { display:none; position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; background:#020609; }
+    #xr-container canvas { width:100%!important; height:100%!important; display:block; }
     .map-btn.btn-3d.active-view { border-color:#00ff9d; color:#00ff9d; background:rgba(0,255,157,.1); }
-
-    /* --- ESTO ES LO NUEVO QUE DEBES PEGAR --- */
-    #map-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      height: auto !important;
-      padding: 10px;
-    }
-    #map-mission-label {
-      flex: 1;
-      white-space: normal;
-      word-break: break-all;
-      line-height: 1.2;
-    }
-    .map-controls {
-      flex-shrink: 0;
-    }
-    /* ---------------------------------------- */
-
+    #loading-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#050a0f; z-index:9999; flex-direction:column; align-items:center; justify-content:center; font-family:'Share Tech Mono',monospace; color:#00ff9d; }
+    .loader-content { width:300px; text-align:center; }
+    .loader-title { font-size:16px; letter-spacing:2px; margin-bottom:20px; color:#fff; }
+    .loader-bar-bg { width:100%; height:2px; background:rgba(0,255,157,0.2); overflow:hidden; }
+    .loader-bar-fill { height:100%; width:0%; background:#00ff9d; box-shadow:0 0 10px #00ff9d; transition:width 0.1s; }
+    .loader-text { margin-top:10px; font-size:12px; letter-spacing:1px; }
+    #chat-widget { position:fixed; bottom:20px; right:20px; width:300px; background:rgba(2,6,9,0.95); border:1px solid var(--border); border-radius:4px; z-index:9999; display:flex; flex-direction:column; transition:height .3s ease; box-shadow:0 5px 20px rgba(0,0,0,0.8); }
+    .chat-collapsed { height:35px; overflow:hidden; cursor:pointer; }
+    .chat-expanded { height:380px; }
+    .chat-header { height:35px; background:rgba(0,212,255,0.1); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 12px; cursor:pointer; color:var(--accent); font-family:'Share Tech Mono',monospace; font-size:13px; font-weight:bold; letter-spacing:1px; }
+    .chat-badge { background:#ff2a2a; color:#fff; padding:2px 6px; border-radius:10px; font-size:10px; display:none; }
+    .chat-body { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px; font-family:'Share Tech Mono',monospace; font-size:11px; }
+    .chat-msg { padding:8px; border-radius:4px; max-width:85%; word-wrap:break-word; line-height:1.4; }
+    .chat-msg.system { color:#5a7b8c; align-self:center; font-size:10px; border:1px dashed #3a6070; }
+    .chat-msg.incoming { background:rgba(58,96,112,0.2); border-left:2px solid var(--accent); align-self:flex-start; color:#e0e0e0; }
+    .chat-msg.outgoing { background:rgba(0,255,157,0.1); border-right:2px solid #00ff9d; align-self:flex-end; color:#00ff9d; text-align:right; }
+    .chat-user { font-weight:bold; display:block; margin-bottom:4px; font-size:10px; opacity:0.8; }
+    .incoming .chat-user { color:var(--accent); }
+    .outgoing .chat-user { color:#00ff9d; }
+    .chat-input-area { display:flex; padding:8px; border-top:1px solid var(--border); background:#050a0f; }
+    #chat-input { flex:1; background:transparent; border:1px solid var(--border); color:#fff; font-family:'Share Tech Mono',monospace; font-size:11px; padding:6px; outline:none; border-radius:2px; }
+    .chat-input-area button { background:rgba(0,212,255,0.15); border:1px solid var(--accent); color:var(--accent); cursor:pointer; font-family:'Share Tech Mono',monospace; font-size:10px; margin-left:6px; padding:0 12px; border-radius:2px; font-weight:bold; }
   </style>
 </head>
 <body>
-
-<style>
-  #loading-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#050a0f; z-index:9999; flex-direction:column; align-items:center; justify-content:center; font-family:'Share Tech Mono', monospace; color:#00ff9d; }
-  .loader-content { width:300px; text-align:center; }
-  .loader-title { font-size:16px; letter-spacing:2px; margin-bottom:20px; color:#fff; }
-  .loader-bar-bg { width:100%; height:2px; background:rgba(0,255,157,0.2); position:relative; overflow:hidden; }
-  .loader-bar-fill { height:100%; width:0%; background:#00ff9d; box-shadow:0 0 10px #00ff9d; transition:width 0.1s; }
-  .loader-text { margin-top:10px; font-size:12px; letter-spacing:1px; }
-</style>
 <div id="loading-overlay">
   <div class="loader-content">
-    <div class="loader-title">INITIALIZING 3D ENVIRONMENT</div>
+    <div class="loader-title">INITIALIZING ENVIRONMENT</div>
     <div class="loader-bar-bg"><div class="loader-bar-fill" id="loader-bar"></div></div>
     <div class="loader-text" id="loader-text">LOADING ASSETS... 0%</div>
   </div>
@@ -67,23 +60,24 @@
         <div class="demo-user" id="demo-view"><div class="demo-user-info"><span class="demo-user-name">viewer@ops.net</span><span class="demo-user-creds">pass: view123</span></div><span class="demo-role role-viewer">VIEWER</span></div>
       </div>
     </div>
-    <div class="status-bar"><div class="status-dot-row"><div class="sdot"></div><span>SERVER ONLINE</span></div><span class="version">v0.1.0 — PROTOTYPE</span></div>
+    <div class="status-bar"><div class="status-dot-row"><div class="sdot"></div><span>SERVER ONLINE</span></div><span class="version">v0.3.0</span></div>
   </div>
 </div>
 <div id="dashboard-screen">
   <div id="topbar">
+    <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle missions panel">☰</button>
     <div class="topbar-logo">OPS<span>::</span>CONSOLE</div>
     <div class="topbar-center" id="mission-tabs"></div>
     <div class="topbar-right">
       <div class="role-badge" id="role-badge">OPERATOR</div>
-      <div class="user-presence"><div class="avatar" id="user-avatar">A</div><div class="avatar" style="border-color:var(--accent2);color:var(--accent2)">B</div></div>
+      <div class="user-presence"><div class="avatar" id="user-avatar">A</div></div>
       <div class="sys-time" id="clock">--:--:--</div>
       <button class="btn-logout" onclick="doLogout()">LOGOUT</button>
     </div>
   </div>
   <div id="main">
-    <div class="panel">
-      <div class="panel-header"><span class="panel-title">MISSIONS</span><span class="panel-badge" id="missions-badge">5 LOADED</span></div>
+    <div class="panel-left">
+      <div class="panel-header"><span class="panel-title">MISSIONS</span><span class="panel-badge">5 LOADED</span></div>
       <div id="mission-list"></div>
       <div class="divider"></div>
       <div class="section-label">ACTION LANE</div>
@@ -94,22 +88,20 @@
     </div>
     <div id="map-area">
       <canvas id="map-canvas"></canvas>
-      <svg id="path-overlay" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div id="agents-layer"></div>
       <div id="xr-container"></div>
       <div class="map-overlay-tl">
         <div id="map-coords">LAT 47.3769° N</div>
         <div id="map-coords2">LON 15.0908° E</div>
-        <div style="margin-top:6px;color:var(--accent2)">● 2 USERS ONLINE</div>
+        <div style="margin-top:6px;color:var(--accent2)" id="online-count">● 0 USERS ONLINE</div>
         <div style="margin-top:4px;font-size:10px;" id="map-mission-label"></div>
       </div>
       <div class="map-overlay-tr">
         <button class="map-btn btn-2d active-view" onclick="on2D()">2D</button>
         <button class="map-btn btn-3d" onclick="on3D()">3D/AR</button>
-        <button class="map-btn btn-vr" onclick="onVR()">VR</button>
+        <button class="map-btn btn-vr" id="btn-enter-vr" onclick="onVR()" disabled>ENTER VR</button>
       </div>
     </div>
-    <div class="panel panel-right">
+    <div class="panel-right">
       <div class="panel-header"><span class="panel-title">CONTEXT</span></div>
       <div class="context-section" id="context-vars"></div>
       <div class="panel-header" style="border-top:1px solid var(--border)"><span class="panel-title">EVENTS</span><span class="panel-badge" id="unacked-count">0 UNACKED</span></div>
@@ -129,205 +121,59 @@
   </div>
 </div>
 <div id="toast"></div>
-
-<style>
-  /* Diseño del widget de chat tipo Cyberpunk */
-  #chat-widget {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 300px;
-    background: rgba(2, 6, 9, 0.95);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    transition: height 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(5px);
-  }
-  .chat-collapsed { height: 35px; overflow: hidden; cursor: pointer; }
-  .chat-collapsed:hover { border-color: var(--accent); }
-  .chat-expanded { height: 380px; }
-  
-  .chat-header {
-    height: 35px;
-    background: rgba(0, 212, 255, 0.1);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 12px;
-    cursor: pointer;
-    color: var(--accent);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 13px;
-    font-weight: bold;
-    letter-spacing: 1px;
-  }
-  .chat-badge { 
-    background: #ff2a2a; color: #fff; padding: 2px 6px; 
-    border-radius: 10px; font-size: 10px; display: none; 
-    animation: pulseChat 1.5s infinite;
-  }
-  @keyframes pulseChat { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-  
-  .chat-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-  }
-  .chat-body::-webkit-scrollbar { width: 5px; }
-  .chat-body::-webkit-scrollbar-thumb { background: var(--border); }
-
-  .chat-msg { padding: 8px; border-radius: 4px; max-width: 85%; word-wrap: break-word; line-height: 1.4; }
-  .chat-msg.system { color: #5a7b8c; align-self: center; font-size: 10px; border: 1px dashed #3a6070; background: transparent; }
-  .chat-msg.incoming { background: rgba(58, 96, 112, 0.2); border-left: 2px solid var(--accent); align-self: flex-start; color: #e0e0e0; }
-  .chat-msg.outgoing { background: rgba(0, 255, 157, 0.1); border-right: 2px solid #00ff9d; align-self: flex-end; color: #00ff9d; text-align: right; }
-  
-  .chat-user { font-weight: bold; display: block; margin-bottom: 4px; font-size: 10px; opacity: 0.8; }
-  .incoming .chat-user { color: var(--accent); }
-  .outgoing .chat-user { color: #00ff9d; }
-
-  .chat-input-area { display: flex; padding: 8px; border-top: 1px solid var(--border); background: #050a0f; }
-  #chat-input {
-    flex: 1; background: transparent; border: 1px solid var(--border);
-    color: #fff; font-family: 'Share Tech Mono', monospace;
-    font-size: 11px; padding: 6px; outline: none; border-radius: 2px;
-  }
-  #chat-input:focus { border-color: var(--accent); }
-  .chat-input-area button {
-    background: rgba(0, 212, 255, 0.15); border: 1px solid var(--accent);
-    color: var(--accent); cursor: pointer; font-family: 'Share Tech Mono', monospace;
-    font-size: 10px; margin-left: 6px; padding: 0 12px; border-radius: 2px; font-weight: bold;
-  }
-  .chat-input-area button:hover { background: var(--accent); color: #000; }
-</style>
-
 <div id="chat-widget" class="chat-collapsed">
-  <div class="chat-header" onclick="toggleChat()">
-    <span class="chat-title">💬 TEAM COMM LINK</span>
-    <span class="chat-badge" id="chat-badge">NEW</span>
-  </div>
-  <div class="chat-body" id="chat-body">
-    <div class="chat-msg system">SECURE CHANNEL ESTABLISHED — P2P ENCRYPTION ACTIVE</div>
-    <div class="chat-msg incoming"><span class="chat-user">OPS-BETA:</span> I'm monitoring the live feed. Standing by for instructions.</div>
-  </div>
+  <div class="chat-header" onclick="toggleChat()"><span>💬 TEAM COMM LINK</span><span class="chat-badge" id="chat-badge">NEW</span></div>
+  <div class="chat-body" id="chat-body"><div class="chat-msg system">SECURE CHANNEL — LIVE SERVER LINK</div></div>
   <div class="chat-input-area">
-    <input type="text" id="chat-input" placeholder="Type message..." onkeypress="handleChatEnter(event)">
+    <input type="text" id="chat-input" placeholder="Type message..." onkeypress="if(event.key==='Enter')sendChatMessage()">
     <button onclick="sendChatMessage()">SEND</button>
   </div>
 </div>
 
-<script>
-  // Lógica del Chat
-  function toggleChat() {
-    var w = document.getElementById('chat-widget');
-    var b = document.getElementById('chat-badge');
-    if (w.classList.contains('chat-collapsed')) {
-      w.classList.remove('chat-collapsed');
-      w.classList.add('chat-expanded');
-      b.style.display = 'none'; // Oculta la notificación al abrir
-      var body = document.getElementById('chat-body');
-      body.scrollTop = body.scrollHeight;
-    } else {
-      w.classList.remove('chat-expanded');
-      w.classList.add('chat-collapsed');
-    }
-  }
-
-  function handleChatEnter(e) {
-    if (e.key === 'Enter') sendChatMessage();
-  }
-
-  function sendChatMessage() {
-    var input = document.getElementById('chat-input');
-    var msg = input.value.trim();
-    if (!msg) return;
-
-    // 1. Mostrar tu mensaje en la pantalla
-    var myRole = (typeof currentRole !== 'undefined') ? currentRole : 'ME';
-    appendMessage('outgoing', myRole, msg);
-    input.value = '';
-
-    // 2. Simular que el compañero está leyendo y responde a los 2-3 segundos
-    setTimeout(function() {
-      var replies = [
-        "Copy that.",
-        "Understood, checking the telemetry now.",
-        "Wait, I'm seeing an anomaly on the radar.",
-        "Approving the request from my terminal.",
-        "Should we initiate the Emergency Stop?",
-        "Agent is moving to the next waypoint.",
-        "Can you confirm the visual feed?"
-      ];
-      var randomReply = replies[Math.floor(Math.random() * replies.length)];
-      appendMessage('incoming', 'OPS-BETA', randomReply);
-      
-      // Si el chat está cerrado, hacer brillar la notificación
-      var w = document.getElementById('chat-widget');
-      if (w.classList.contains('chat-collapsed')) {
-        document.getElementById('chat-badge').style.display = 'inline-block';
-        if (typeof showToast === 'function') showToast('💬 New message from OPS-BETA');
-      }
-    }, 2000 + Math.random() * 2000); // Retraso aleatorio para que parezca humano
-  }
-
-  function appendMessage(type, user, text) {
-    var body = document.getElementById('chat-body');
-    var div = document.createElement('div');
-    div.className = 'chat-msg ' + type;
-    div.innerHTML = '<span class="chat-user">' + user + ':</span>' + text;
-    body.appendChild(div);
-    body.scrollTop = body.scrollHeight; // Auto-scroll hacia abajo
-  }
-</script>
-
+<!-- Three.js only (no GLTFLoader needed) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="assets/js/data.js"></script>
+<script src="assets/js/ws-client.js"></script>
 <script src="assets/js/map.js"></script>
 <script src="assets/js/xr-engine.js"></script>
 <script src="assets/js/dashboard.js"></script>
 <script src="assets/js/auth.js"></script>
 
-<script src="assets/js/telemetry.js"></script> 
-
 <script>
-function on2D() {
-  if (typeof exitXR === 'function') exitXR();
-  document.querySelectorAll('.map-btn').forEach(function(b){ b.classList.remove('active-view'); });
-  document.querySelector('.btn-2d').classList.add('active-view');
+function toggleChat(){
+    var w=document.getElementById('chat-widget');
+    if(w.classList.contains('chat-collapsed')){w.classList.remove('chat-collapsed');w.classList.add('chat-expanded');document.getElementById('chat-badge').style.display='none';document.getElementById('chat-body').scrollTop=9999;}
+    else{w.classList.remove('chat-expanded');w.classList.add('chat-collapsed');}
 }
-function on3D() {
-  if (typeof xrActive !== 'undefined' && xrActive) { if (typeof refreshXRScene === 'function') refreshXRScene(); return; }
-  document.querySelectorAll('.map-btn').forEach(function(b){ b.classList.remove('active-view'); });
-  document.querySelector('.btn-3d').classList.add('active-view');
-  if (typeof enterXR === 'function') enterXR();
+function sendChatMessage(){
+    var input=document.getElementById('chat-input'),msg=input.value.trim();
+    if(!msg)return; WS.send({type:'chat',user:currentUser||'anon',role:currentRole||'VIEWER',text:msg}); input.value='';
 }
-function onVR() {
-  if (typeof xrActive === 'undefined' || !xrActive) { on3D(); }
-  if (navigator.xr) {
-    navigator.xr.isSessionSupported('immersive-vr').then(function(supported){
-      if (supported) {
-        if (typeof xrRenderer !== 'undefined' && xrRenderer.xr) xrRenderer.xr.enabled = true;
-        navigator.xr.requestSession('immersive-vr').then(function(session){
-          if (typeof xrRenderer !== 'undefined' && xrRenderer.xr) xrRenderer.xr.setSession(session);
-          showToast('VR SESSION ACTIVE — put on headset');
-        });
-      } else {
-        showToast('WebXR not supported on this device');
-      }
-    });
-  } else {
-    showToast('WebXR not available — open on Meta Quest browser');
-  }
+function on2D(){
+    if(typeof exitXR==='function')exitXR();
+    document.querySelectorAll('.map-btn').forEach(function(b){b.classList.remove('active-view');});
+    document.querySelector('.btn-2d').classList.add('active-view');
 }
+function on3D(){
+    document.querySelectorAll('.map-btn').forEach(function(b){b.classList.remove('active-view');});
+    document.querySelector('.btn-3d').classList.add('active-view');
+    if(typeof enterXR==='function')enterXR();
+}
+function onVR(){
+    if(!xrActive)on3D();
+    if(typeof enterImmersiveVR==='function')enterImmersiveVR();
+}
+function checkVRSupport(){
+    var btn=document.getElementById('btn-enter-vr'); if(!btn)return;
+    var secure = location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1';
+    if(!secure){btn.textContent='VR (NEEDS HTTPS)';btn.title='Open with https://';return;}
+    if(!navigator.xr){btn.textContent='VR (NO WEBXR)';btn.title='Browser lacks WebXR';return;}
+    navigator.xr.isSessionSupported('immersive-vr').then(function(ok){
+        if(ok){btn.disabled=false;btn.textContent='ENTER VR';btn.style.borderColor='#00ff9d';btn.style.color='#00ff9d';btn.style.animation='pulse 2s infinite';}
+        else{btn.textContent='VR (NO HEADSET)';btn.title='Connect Meta Quest';}
+    }).catch(function(){btn.textContent='VR (ERROR)';});
+}
+var _origInit=initDashboard;
+initDashboard=function(){_origInit();checkVRSupport();};
 </script>
 </body>
 </html>
