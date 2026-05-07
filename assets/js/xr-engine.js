@@ -19,6 +19,8 @@ var vrLaserLines = [];
 var vrRaycaster = null;
 var vrTempMatrix = null;
 var vrSelectedAgent = null;
+var vrExitButton = null;       // 3D EXIT VR panel in the scene
+var vrSqueezeState = [false, false]; // track both grips for double-squeeze exit
 
 // ─── PUBLIC API ─────────────────────────────────────────────
 function enterXR() {
@@ -208,11 +210,12 @@ function _buildScene() {
 
     _buildAgentMeshes();
     _setupVRControllers();
+    _buildVRExitButton();
 }
 
 // ─── VR CONTROLLERS ─────────────────────────────────────────
 function _setupVRControllers() {
-    vrControllers = []; vrLaserLines = [];
+    vrControllers = []; vrLaserLines = []; vrSqueezeState = [false, false];
     for (var i = 0; i < 2; i++) {
         var ctrl = xrRenderer.xr.getController(i);
         xrCameraRig.add(ctrl);
@@ -232,16 +235,87 @@ function _setupVRControllers() {
         dot.name='laser-dot'; ctrl.add(dot);
         ctrl.addEventListener('connected', (function(l){return function(){l.visible=true;};})(laser));
         ctrl.addEventListener('disconnected', (function(l){return function(){l.visible=false;};})(laser));
-        ctrl.addEventListener('selectstart', _onVRSelect);
-        ctrl.addEventListener('squeezestart', function(){ if(vrSelectedAgent){showToast('Deselected');vrSelectedAgent=null;} });
+
+        // TRIGGER → select agent OR press EXIT VR button
+        ctrl.addEventListener('selectstart', _onVRSelectOrExit);
+
+        // SQUEEZE → track both grips; double-squeeze = exit VR
+        ctrl.addEventListener('squeezestart', (function(idx){ return function() {
+            vrSqueezeState[idx] = true;
+            // If BOTH grips squeezed simultaneously → exit VR
+            if (vrSqueezeState[0] && vrSqueezeState[1]) {
+                _exitVRSession();
+            } else if (vrSelectedAgent) {
+                showToast('Deselected'); vrSelectedAgent = null;
+            }
+        }; })(i));
+        ctrl.addEventListener('squeezeend', (function(idx){ return function() {
+            vrSqueezeState[idx] = false;
+        }; })(i));
+
         vrControllers.push(ctrl); vrLaserLines.push(laser);
     }
 }
 
-function _onVRSelect() {
+// ─── VR EXIT BUTTON (floating panel in 3D space) ───────────
+function _buildVRExitButton() {
+    // Create a red panel that says "EXIT VR" floating in front of the user
+    var cv = document.createElement('canvas');
+    cv.width = 512; cv.height = 128;
+    var ct = cv.getContext('2d');
+    // Background
+    ct.fillStyle = 'rgba(255, 20, 40, 0.85)';
+    ct.fillRect(0, 0, 512, 128);
+    // Border
+    ct.strokeStyle = '#ffffff';
+    ct.lineWidth = 4;
+    ct.strokeRect(4, 4, 504, 120);
+    // Text
+    ct.fillStyle = '#ffffff';
+    ct.font = 'bold 48px Share Tech Mono, monospace';
+    ct.textAlign = 'center';
+    ct.textBaseline = 'middle';
+    ct.fillText('EXIT VR', 256, 55);
+    // Subtitle
+    ct.font = '20px Share Tech Mono, monospace';
+    ct.fillStyle = 'rgba(255,255,255,0.7)';
+    ct.fillText('Aim + Trigger  |  Squeeze Both Grips', 256, 100);
+
+    var tex = new THREE.CanvasTexture(cv);
+    var mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
+    var geo = new THREE.PlaneGeometry(1.2, 0.3);
+    vrExitButton = new THREE.Mesh(geo, mat);
+    vrExitButton.name = 'vr-exit-button';
+    // Position: floating above and slightly in front of the user's start position
+    vrExitButton.position.set(0, 2.5, 5);
+    // Face the user
+    vrExitButton.lookAt(0, 1.6, 8);
+    xrScene.add(vrExitButton);
+}
+
+function _exitVRSession() {
+    if (xrVRSession) {
+        xrVRSession.end().catch(function(){});
+        // The 'end' event listener in enterImmersiveVR handles cleanup
+    }
+}
+
+// ─── TRIGGER → check exit button first, then agents ────────
+function _onVRSelectOrExit() {
     vrTempMatrix.identity().extractRotation(this.matrixWorld);
     vrRaycaster.ray.origin.setFromMatrixPosition(this.matrixWorld);
-    vrRaycaster.ray.direction.set(0,0,-1).applyMatrix4(vrTempMatrix);
+    vrRaycaster.ray.direction.set(0, 0, -1).applyMatrix4(vrTempMatrix);
+
+    // Check EXIT VR button first
+    if (vrExitButton) {
+        var exitHits = vrRaycaster.intersectObject(vrExitButton, false);
+        if (exitHits.length > 0) {
+            _exitVRSession();
+            return;
+        }
+    }
+
+    // Otherwise do normal agent raycast
     _doAgentRaycast();
 }
 
@@ -364,16 +438,50 @@ function _renderFrame() {
     });
 
     if (xrVRSession) {
+        // Make exit button always face the camera
+        if (vrExitButton && xrCamera) {
+            var camPos = new THREE.Vector3();
+            xrCamera.getWorldPosition(camPos);
+            vrExitButton.lookAt(camPos);
+        }
+
         vrControllers.forEach(function(ctrl,ci){
             if (!vrLaserLines[ci]||!vrLaserLines[ci].visible) return;
             vrTempMatrix.identity().extractRotation(ctrl.matrixWorld);
             vrRaycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
             vrRaycaster.ray.direction.set(0,0,-1).applyMatrix4(vrTempMatrix);
-            var hits = vrRaycaster.intersectObjects(xrAgentMeshes.map(function(a){return a.mesh;}),false);
+
+            // Collect all raycast targets: agents + exit button
+            var targets = xrAgentMeshes.map(function(a){return a.mesh;});
+            if (vrExitButton) targets.push(vrExitButton);
+
+            var hits = vrRaycaster.intersectObjects(targets,false);
             var pts=vrLaserLines[ci].geometry.attributes.position;
             var dot=ctrl.getObjectByName('laser-dot');
-            if(hits.length>0){pts.setZ(1,-hits[0].distance);if(dot){dot.position.set(0,0,-hits[0].distance);dot.material.opacity=0.8;}vrLaserLines[ci].material.opacity=0.9;}
-            else{pts.setZ(1,-15);if(dot)dot.material.opacity=0;vrLaserLines[ci].material.opacity=0.4;}
+
+            if(hits.length>0){
+                var hitDist = hits[0].distance;
+                pts.setZ(1,-hitDist);
+                if(dot){dot.position.set(0,0,-hitDist);dot.material.opacity=0.8;}
+                vrLaserLines[ci].material.opacity=0.9;
+
+                // Highlight exit button when hovered
+                if (vrExitButton && hits[0].object === vrExitButton) {
+                    vrExitButton.material.color.setHex(0xff6666);
+                    vrExitButton.scale.set(1.1, 1.1, 1.1);
+                } else if (vrExitButton) {
+                    vrExitButton.material.color.setHex(0xffffff);
+                    vrExitButton.scale.set(1, 1, 1);
+                }
+            } else {
+                pts.setZ(1,-15);
+                if(dot)dot.material.opacity=0;
+                vrLaserLines[ci].material.opacity=0.4;
+                if (vrExitButton) {
+                    vrExitButton.material.color.setHex(0xffffff);
+                    vrExitButton.scale.set(1, 1, 1);
+                }
+            }
             pts.needsUpdate=true;
         });
     }
