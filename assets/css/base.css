@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #050a0f; --panel: #080f17; --border: #0d2438;
+  --accent: #00d4ff; --accent2: #00ff9d; --warn: #ff6b2b;
+  --danger: #ff2b5e; --text: #c8e0f0; --dim: #3a6070;
+  --grid: rgba(0,212,255,0.04);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:var(--bg); color:var(--text);
+  font-family:'Rajdhani',sans-serif; font-size:14px;
+  min-height:100vh;
+  background-image: linear-gradient(var(--grid) 1px,transparent 1px), linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+body::after {
+  content:''; position:fixed; inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+  pointer-events:none; z-index:999;
+}
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); }
+.divider { height:1px; background:var(--border); margin:2px 0; flex-shrink:0; }
+.scenario-tag { font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:1px; padding:2px 5px; border:1px solid; margin-top:3px; display:inline-block; }
+.tag-infra    { color:var(--accent); border-color:rgba(0,212,255,.3); }
+.tag-hospital { color:#ff9fd4; border-color:rgba(255,159,212,.3); }
+.tag-wild     { color:#ff6b2b; border-color:rgba(255,107,43,.3); }
+.tag-ware     { color:#ffd166; border-color:rgba(255,209,102,.3); }
+.tag-offshore { color:#7eb8ff; border-color:rgba(126,184,255,.3); }
+#toast {
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(60px);
+  background:var(--panel); border:1px solid var(--accent2); color:var(--accent2);
+  font-family:'Share Tech Mono',monospace; font-size:12px; padding:10px 20px;
+  z-index:300; transition:transform .3s; pointer-events:none;
+}
+#toast.show { transform:translateX(-50%) translateY(0); }
+@keyframes fadein    { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes spin      { to{transform:translate(-50%,-50%) rotate(360deg)} }
+@keyframes bgpulse   { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.5} 50%{transform:translate(-50%,-50%) scale(1.2);opacity:1} }
+@keyframes dotpulse  { 0%,100%{opacity:1} 50%{opacity:.4} }
+@keyframes pulse     { 0%,100%{box-shadow:0 0 0 0 rgba(0,255,157,.4)} 50%{box-shadow:0 0 0 8px rgba(0,255,157,0)} }
