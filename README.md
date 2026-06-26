@@ -1,196 +1,246 @@
-# OPS::CONSOLE — AR/VR Operations Console
+# XR-Ops Console
 
-WebXR operations console for multi-mission robotic orchestration.
-Three.js + FastAPI + WebSocket.
+**Vendor-Neutral AR/VR Operations Console for Collaborative Robotic Mission Orchestration**
 
-## Directory Tree
+*Cyber Physical Systems — Montanuniversität Leoben — SS 2026*
 
-```
-ops-console/
-├── index.html                  ← HTML (login + dashboard + chat + 3D/VR)
-├── server.py                   ← Python backend (FastAPI + WebSocket)
-├── requirements.txt            ← Python: fastapi, uvicorn, websockets
-├── package.json                ← Node: Vite dev server
-├── vite.config.js              ← Vite: proxy, HTTPS, GitHub Pages build
-├── generate_certs.py           ← SSL certs for Meta Quest (Python puro)
-├── tests.py                    ← 114 tests automaticos
-├── .gitignore
-│
-├── assets/
-│   ├── css/
-│   │   ├── base.css            ← Variables, reset, animaciones
-│   │   ├── login.css           ← Pantalla de login
-│   │   └── dashboard.css       ← Dashboard, sidebar colapsable, modal
-│   ├── data/
-│   │   └── missions.json       ← 5 misiones (datos seed)
-│   └── js/
-│       ├── ws-client.js        ← WebSocket dual: backend o modo estatico
-│       ├── auth.js             ← Login/logout/RBAC/sesion
-│       ├── dashboard.js        ← Paneles, acciones, eventos, chat, toast
-│       ├── map.js              ← Mapa 2D radar canvas
-│       └── xr-engine.js        ← Three.js 3D + WebXR VR + mandos
-│
-├── certs/                      ← (generado) Certificados SSL
-│   ├── server.key
-│   └── server.crt
-│
-├── node_modules/               ← (generado) npm install
-└── docs/                       ← (generado) npm run build → GitHub Pages
-```
+---
 
-## Prerequisites
+## Overview
 
-- Python 3.10+ → https://www.python.org/downloads/
-- Node.js 18+ → https://nodejs.org/
-- Git → https://git-scm.com/
+**XR-Ops Console** is a vendor-neutral, web-based Extended Reality (XR) platform designed for the collaborative, real-time supervision of heterogeneous robotic fleets (UAS, UGV, optical sensors and human agents). The system centralises the telemetry of five concurrent mission scenarios over a single authoritative Python backend, synchronising the 2D tactical radar and the 3D/VR immersive scene through a bidirectional WebSocket channel with a deterministic 300 ms tick.
 
-## Setup (once)
+The prototype has been developed as a Bachelor's Thesis project under the supervision of **Prof. Günther Hutter** at the Chair of Cyber Physical Systems, Montanuniversität Leoben.
 
-Open PowerShell in the project folder:
+---
 
-```powershell
-# 1. Python dependencies
-pip install -r requirements.txt
-pip install cryptography
+## Key Features
 
-# 2. Node dependencies (Vite)
-npm install
+- **Single authoritative backend.** All simulation logic (Bézier trajectories, stochastic telemetry noise, override decisions) is executed inside `server.py`. The frontend operates as a pure renderer with zero computation in the browser.
+- **Native WebXR** running on top of Three.js r128, providing direct support for the Meta Quest 3 without intermediate frameworks (A-Frame was evaluated and discarded).
+- **Hierarchical RBAC** with three roles (Supervisor, Operator, Viewer). Permissions are enforced on every action, chat message and override approval.
+- **Full 300 ms synchronisation.** The 2D radar, 3D scene, dashboard, chat and Audit Trail panel all consume the same source of truth over WebSocket.
+- **Static fallback mode.** If `ws-client.js` does not detect the backend within 3 s, it loads `missions.json` locally. The frontend remains deployable on GitHub Pages.
+- **Pure Python stack.** No Node.js, no Vite, no npm. A single command launches the whole system: `python start.py`.
+- **Auto-generated HTTPS.** `start.py` issues local certificates through the `cryptography` library with SANs for `localhost` and the LAN IP, which is a hard requirement for WebXR activation.
+- **Hybrid mesh optimisation.** `THREE.InstancedMesh` is used for identical agent swarms and `THREE.LOD` together with Draco compression for detailed GLB assets.
 
-# 3. SSL certificates (for Meta Quest VR)
-python generate_certs.py
-```
-
-## Daily Development
-
-You need TWO terminals:
-
-### Terminal 1 — Backend (Python)
-
-```powershell
-uvicorn server:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Terminal 2 — Frontend (Vite)
-
-```powershell
-npm run dev
-```
-
-Open **http://localhost:5173** in browser.
-Vite auto-proxies /ws and /api to the Python backend.
-Any code change refreshes instantly.
-
-### Demo Users
-
-| User                | Password  | Role       |
-|---------------------|-----------|------------|
-| supervisor@ops.net  | super123  | SUPERVISOR |
-| operator@ops.net    | oper123   | OPERATOR   |
-| viewer@ops.net      | view123   | VIEWER     |
-
-## Meta Quest 3 — Step by Step
-
-### 1. Your PC and the Quest must be on the same WiFi
-
-### 2. Generate HTTPS certificates (once)
-
-```powershell
-python generate_certs.py
-```
-
-The script prints your local IP (e.g. `192.168.1.50`).
-
-### 3. Start with HTTPS (two terminals)
-
-```powershell
-# Terminal 1: Backend with SSL
-uvicorn server:app --host 0.0.0.0 --port 8443 --ssl-keyfile certs/server.key --ssl-certfile certs/server.crt
-
-# Terminal 2: Vite with SSL
-npm run dev:ssl
-```
-
-### 4. On your PC browser
-
-Go to **https://localhost:5173**
-Accept the certificate warning (Advanced → Proceed).
-Login and verify the dashboard works.
-
-### 5. On the Meta Quest 3 browser
-
-Open the Quest browser and type:
-
-```
-https://YOUR_IP:5173
-```
-
-(Replace YOUR_IP with the IP from step 2, e.g. `https://192.168.1.50:5173`)
-
-Accept the certificate warning:
-- Tap "Advanced" or "Details"
-- Tap "Proceed to site" or "Accept risk"
-
-### 6. Enter VR
-
-1. Login with any demo user
-2. Tap **3D/AR** button (top right of map)
-3. The **ENTER VR** button turns green if the headset is detected
-4. Tap **ENTER VR**
-5. Put on the headset — you are inside the 3D scene
-
-### 7. Using the Quest controllers
-
-- **Trigger (index finger)** → Laser selects an agent (robot/drone)
-- **Squeeze (side grip)** → Deselects current agent
-- If the selected agent has a pending Override, the modal opens automatically (Supervisor role)
-- The laser turns brighter when pointing at an agent
-
-### Troubleshooting Meta Quest
-
-| Problem | Solution |
-|---------|----------|
-| ENTER VR button says "NEEDS HTTPS" | You opened with http:// instead of https:// |
-| ENTER VR button says "NO HEADSET" | Open the URL in the Quest browser, not PC |
-| ENTER VR button says "NO WEBXR" | Use Meta Quest Browser (not Firefox Reality) |
-| Certificate error loops | Clear Quest browser cache, re-accept cert |
-| Black screen after Enter VR | Check the Python backend is running |
-| Controllers not visible | Press trigger once to wake them up |
-
-## GitHub Pages (Static Demo)
-
-```powershell
-npm run build
-git add docs/
-git commit -m "Build for GitHub Pages"
-git push
-```
-
-In GitHub repo Settings → Pages → Source: Deploy from branch → `/docs` folder.
-
-The static version works without the Python backend.
-It loads missions.json directly and runs a local simulation.
-VR still works if accessed via HTTPS (GitHub Pages provides this).
-
-## Running Tests
-
-```powershell
-pip install httpx websockets
-python tests.py
-```
+---
 
 ## Architecture
 
 ```
-┌──────────────┐     WebSocket      ┌─────────────────┐
-│  Browser UI  │ ◄────────────────► │  Python Backend  │
-│  (Three.js   │   JSON state       │  (FastAPI)       │
-│   + WebXR)   │   every 300ms      │                  │
-└──────────────┘                    └─────────────────┘
-       │                                    │
-       │  If no backend (GitHub Pages):     │
-       │  loads missions.json               ▼
-       │  runs local simulation      missions.json
-       ▼                             (seed data)
-  Meta Quest 3
-  (immersive-vr via WebXR)
++----------------------------------------------------------------------+
+|                     CLIENTS (Browser / Meta Quest 3)                 |
+|  +----------+  +----------+  +------------+  +----------+            |
+|  |  map.js  |  | xr-engine|  |dashboard.js|  | auth.js  |            |
+|  | 2D radar |  |  WebXR   |  |  Override  |  |   RBAC   |            |
+|  +----+-----+  +----+-----+  +-----+------+  +----+-----+            |
+|       +------------+----------------+--------------+                 |
+|                            |                                         |
+|                     +------+------+                                  |
+|                     | ws-client.js|  <-- fallback --> missions.json  |
+|                     +------+------+                                  |
++----------------------------+-----------------------------------------+
+                             | WSS  (300 ms tick)
++----------------------------+-----------------------------------------+
+|                     +------+------+                                  |
+|                     |  server.py  |   FastAPI + Uvicorn + Pydantic   |
+|                     |  sim_loop() |                                  |
+|                     +------+------+                                  |
+|                            |                                         |
+|  +-----------------+-------+--------+--------------------+           |
+|  |  missions.json  | Bezier engine  |  Chat / Audit Log  |           |
+|  |   (seed data)   | Telemetry tick |  RBAC validation   |           |
+|  +-----------------+----------------+--------------------+           |
+|                          BACKEND (Python 3.10+)                      |
++----------------------------------------------------------------------+
 ```
+
+### Core Modules
+
+| Layer | File | Responsibility |
+|-------|------|----------------|
+| Infrastructure | `start.py` | Single bootstrap: SSL generation, Uvicorn launch, static serving |
+| Backend | `server.py` | Event-driven simulation engine, deterministic 300 ms broadcast |
+| Backend | `missions.json` | Seed-data contract: five missions, waypoints and agents |
+| Frontend | `index.html` | Web orchestrator, login flow and Audit Trail panel |
+| Frontend | `auth.js` | RBAC (Supervisor / Operator / Viewer) and Emergency Stop |
+| Frontend | `xr-engine.js` | Immersive 3D core (Three.js r128 + WebXR Device API) |
+| Frontend | `map.js` | Tactical 2D radar over HTML5 Canvas |
+| Frontend | `ws-client.js` | WebSocket bridge with automatic static fallback |
+| Frontend | `audio-manager.js` | Centralised audio alerts for critical events |
+
+---
+
+## Installation and Launch
+
+### Prerequisites
+
+- Python 3.10 or higher
+- A browser with WebGL2 support (Chrome, Edge or Firefox)
+- *(Optional)* Meta Quest 3 connected to the same local network for VR mode
+
+### Procedure
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/paolagarrido/webxr-ops-console.git
+cd webxr-ops-console
+
+# 2. Install dependencies
+pip install fastapi uvicorn websockets pydantic cryptography
+
+# 3. Launch the full system (single command)
+python start.py
+```
+
+The `start.py` script performs the following operations automatically:
+
+1. Generation of local SSL certificates with SANs (`localhost` and the LAN IP).
+2. Uvicorn launch on port **8443** with HTTPS enabled.
+3. Static serving of the frontend from the project root.
+4. WebSocket activation on the `/ws` endpoint.
+
+### Access
+
+| Environment | URL |
+|-------------|-----|
+| Local desktop | `https://localhost:8443` |
+| Meta Quest 3 | `https://<LAN-IP>:8443` |
+| Static demo (no backend) | `https://mission-xr.github.io/ops-console/` |
+
+> On the first access, the browser will warn about the self-signed certificate. The exception must be accepted in order to enable WebXR.
+
+---
+
+## Demo Users
+
+| User | Password | Role | Permissions |
+|------|----------|------|-------------|
+| `supervisor@ops.net` | `super123` | **SUPERVISOR** | Global override, Emergency Stop, broadcast chat |
+| `operator@ops.net` | `oper123` | **OPERATOR** | Action ACK, tactical chat, telemetry |
+| `viewer@ops.net` | `view123` | **VIEWER** | Read-only (chat read-only, no override) |
+
+---
+
+## Mission Scenarios
+
+The backend runs the five scenarios in parallel. The operator selects one of them from the top bar of the interface.
+
+| Identifier | Scenario | Agents |
+|------------|----------|--------|
+| `INFRA-INSPECT-01` | Infrastructure inspection | UAS-01, UGV-02, VISION-02 |
+| `HOSPITAL-TRANSPORT-02` | Hospital logistics | UGV-02, HUM-03, OPS-HUMAN |
+| `WILDFIRE-MAP-03` | Wildfire mapping | UAS-01, UGV-02, LLM-01, VISION-02 |
+| `WAREHOUSE-LOG-04` | Warehouse logistics | UGV-02 (fleet), OPS-HUMAN |
+| `OFFSHORE-WIND-05` | Offshore wind farm inspection | UAS-01, VISION-02 |
+
+---
+
+## Code Updates
+
+### Backend
+
+- **`server.py`** replaces the former client-side `simulation.js`. The entire physics, telemetry and Bézier trajectory pipeline now resides in Python, using `asyncio.sleep(0.3)` to guarantee the deterministic broadcast tick.
+- **`missions.json`** is established as a seed-data contract fully decoupled from the frontend, replacing `data.js`. It is loaded only once during server startup.
+- **Pydantic** strictly validates every telemetry payload, ensuring that no malformed state ever reaches the client.
+- **Deterministic LLM-01.** The cognitive agent operates exclusively on local seed-data. No runtime calls are issued to cloud APIs, a deliberate decision adopted to guarantee the academic reproducibility of the prototype.
+
+### Frontend
+
+- **`ws-client.js`** (newly introduced module) implements the WebSocket bridge with backend auto-detection. If no response is received within 3 s, it falls back automatically to `missions.json`, enabling static-mode operation (compatible with GitHub Pages).
+- **`xr-engine.js`** has been migrated to **Three.js r128 with the native WebXR Device API**. A-Frame was evaluated during the early stage and discarded due to unnecessary overhead.
+- **Hybrid mesh optimisation.** `THREE.InstancedMesh` is combined with `THREE.LOD` and `DRACOLoader` for identical agent swarms and high-detail GLB assets respectively. Procedural geometry is retained as a fallback when GLB assets are not available.
+- **`dashboard.js`** has been refactored as a pure renderer. All simulation logic is delegated to the backend.
+- **`audio-manager.js`** centralises the emission of audio alerts (pending override, Emergency Stop, action ACK).
+
+### Infrastructure
+
+- **`start.py`** is consolidated as the single entry point of the system, removing all dependencies on Node.js, Vite and npm.
+- **Automatic HTTPS.** Local certificate issuance is handled through the `cryptography` library, generating SANs for `localhost` and the LAN IP, which is a strict requirement of the WebXR Device API.
+
+### Post-Defence Fixes
+
+- Restoration of the chat widget across logout / re-login sequences, addressed by invoking `_resetChatWidget()` at every login.
+- Restoration of the emergency button, addressed by adding `_styleEmergencyBtn()` to the WebSocket `state` handler.
+- Explicit reset of the reconnection counter `WS._attempt` inside `doLogout()`, avoiding cumulative counters across sessions.
+
+---
+
+## RBAC Permission Matrix
+
+| Action | Viewer | Operator | Supervisor |
+|--------|:------:|:--------:|:----------:|
+| Telemetry observation | Yes | Yes | Yes |
+| Chat message transmission | No | Yes | Yes |
+| Waypoint and action ACK | No | Yes | Yes |
+| Override approval (two-step + auditable comment) | No | No | Yes |
+| Global Emergency Stop | No | No | Yes |
+
+Trajectory override requires two confirmation steps and a mandatory comment, which is recorded in the Audit Trail.
+
+---
+
+## Performance Metrics
+
+| Metric | Target | Measured |
+|--------|--------|----------|
+| Server broadcast tick | 300 ms | 300 ms ± 5 ms |
+| Mean round-trip latency (τ_RTL) | < 100 ms | < 60 ms |
+| Emergency Stop response time | < 100 ms | sub-100 ms |
+| VR frame rate (Meta Quest 3) | 72 fps | 72 fps stable |
+
+---
+
+## Repository Structure
+
+```
+webxr-ops-console/
+├── start.py                  ← Single bootstrap (SSL + Uvicorn + static)
+├── server.py                 ← FastAPI backend + sim_loop()
+├── missions.json             ← Seed-data for the five scenarios
+├── requirements.txt
+├── certs/                    ← Auto-generated SSL (gitignored)
+├── index.html                ← Web orchestrator
+├── assets/
+│   ├── css/
+│   │   ├── base.css
+│   │   ├── login.css
+│   │   └── dashboard.css
+│   ├── js/
+│   │   ├── auth.js           ← RBAC and Emergency Stop
+│   │   ├── dashboard.js      ← Override renderer and chat
+│   │   ├── map.js            ← 2D HTML5 Canvas radar
+│   │   ├── xr-engine.js      ← WebXR + Three.js r128
+│   │   ├── ws-client.js      ← WebSocket bridge + fallback
+│   │   └── audio-manager.js  ← Audio alerts
+│   └── models/               ← Draco-compressed GLBs + procedural fallback
+└── README.md
+```
+
+---
+
+## Technology Stack
+
+**Backend:** Python 3.10+, FastAPI, Uvicorn, Pydantic, WebSockets, cryptography.
+**Frontend:** Vanilla JavaScript, Three.js r128, WebXR Device API, HTML5 Canvas, GLTFLoader, DRACOLoader.
+**Target hardware:** Meta Quest 3 and desktop browsers with WebGL2 support.
+**Build tooling:** none required — the system does not include a build step.
+
+---
+
+## Authorship
+
+Bachelor's Thesis co-authored by:
+
+- **Paola Garrido López**
+- **María Segovia**
+
+*Development of a Vendor-Neutral AR/VR Operations Console for Collaborative Robotic Mission Orchestration.* Montanuniversität Leoben, Chair of Cyber Physical Systems (Prof. Günther Hutter), SS 2026.
+
+---
+
+## License
+
+Academic project developed within the framework of Montanuniversität Leoben. Use restricted to educational and research purposes.
